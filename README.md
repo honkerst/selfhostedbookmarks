@@ -66,7 +66,7 @@ A simple bookmarking service in memory of del.icio.us, built with vanilla PHP an
 2. Copy the entire `javascript:...` code
 3. Create a new bookmark in your browser
 4. Set the bookmark URL to the copied code
-5. Name it something like "Save to del.icio.us"
+5. Name it something like "Add to SHB"
 
 ## Usage
 
