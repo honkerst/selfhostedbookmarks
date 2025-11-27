@@ -1,6 +1,6 @@
-# Technical Documentation: Pinboard Clone
+# Technical Documentation: del.icio.us Clone
 
-This document provides a comprehensive explanation of the pinboard.in clone application codebase, including architecture, components, data flow, and implementation details.
+This document provides a comprehensive explanation of the del.icio.us clone application codebase, including architecture, components, data flow, and implementation details.
 
 ## Table of Contents
 
@@ -17,7 +17,7 @@ This document provides a comprehensive explanation of the pinboard.in clone appl
 
 ## Overview
 
-This is a self-hosted bookmarking service built with **vanilla PHP** (backend) and **vanilla JavaScript** (frontend). It allows users to save, organize, and search bookmarks with tags, similar to pinboard.in or del.icio.us.
+This is a self-hosted bookmarking service built with **vanilla PHP** (backend) and **vanilla JavaScript** (frontend). It allows users to save, organize, and search bookmarks with tags, similar to del.icio.us.
 
 **Key Technologies:**
 - Backend: PHP 7.4+ with SQLite database
@@ -30,7 +30,7 @@ This is a self-hosted bookmarking service built with **vanilla PHP** (backend) a
 ### File Structure
 
 ```
-pinboard-clone/
+selfhostedbookmarks/
 ├── api/                      # API endpoints
 │   ├── auth.php             # Authentication API
 │   ├── bookmarks.php        # Bookmarks CRUD API
@@ -157,7 +157,7 @@ CREATE TABLE login_attempts (
 The application uses a **single-user authentication model** - only one user account exists.
 
 **Implementation:**
-- Password hash stored in `includes/config.php` or as environment variable `PINBOARD_PASSWORD_HASH`
+- Password hash stored in `includes/config.php` or as environment variable `SHB_PASSWORD_HASH`
 - **No default password hash** - must be configured before first use
 - Hash generated using PHP's `password_hash()` with bcrypt
 - Session-based authentication with secure cookies
@@ -798,7 +798,7 @@ header("Expires: 0");
 
 **Option 2: Environment variable (Production)**
 1. Generate hash: `password_hash('your_password', PASSWORD_DEFAULT)`
-2. Set environment variable: `export PINBOARD_PASSWORD_HASH='your_hash_here'`
+2. Set environment variable: `export SHB_PASSWORD_HASH='your_hash_here'`
 3. Or configure in your web server environment
 
 **Option 3: Command line**
@@ -830,5 +830,5 @@ header("Expires: 0");
 
 ---
 
-This documentation should provide a complete understanding of how the pinboard clone application works, its components, data flow, and implementation details.
+This documentation should provide a complete understanding of how the del.icio.us clone application works, its components, data flow, and implementation details.
 

@@ -1,4 +1,4 @@
--- SQLite schema for Pinboard Clone
+-- SQLite schema for del.icio.us Clone
 -- Single user setup - no users table needed
 
 CREATE TABLE IF NOT EXISTS bookmarks (

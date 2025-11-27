@@ -66,7 +66,7 @@ if (isset($_SESSION['login_time'])) {
 // To set password: password_hash('your_password', PASSWORD_DEFAULT)
 // You can set this either as an environment variable OR as a constant below
 // Option 1: Environment variable (recommended for production)
-$passwordHash = getenv('PINBOARD_PASSWORD_HASH');
+$passwordHash = getenv('SHB_PASSWORD_HASH');
 
 // Option 2: Define directly in config (if environment variable not set)
 if (empty($passwordHash)) {
@@ -76,7 +76,7 @@ if (empty($passwordHash)) {
     
     // If neither is set, show error
     if (empty($passwordHash)) {
-        die('Error: PINBOARD_PASSWORD_HASH environment variable must be set, or $passwordHash must be set in config.php. Generate hash using setup-password-web.php');
+        die('Error: SHB_PASSWORD_HASH environment variable must be set, or $passwordHash must be set in config.php. Generate hash using setup-password-web.php');
     }
 }
 

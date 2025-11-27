@@ -49,7 +49,7 @@ A simple bookmarking service in memory of del.icio.us, built with vanilla PHP an
    
    Update `includes/config.php` and set the `PASSWORD_HASH` constant, or set it as an environment variable:
    ```bash
-   export PINBOARD_PASSWORD_HASH='your_hash_here'
+   export SHB_PASSWORD_HASH='your_hash_here'
    ```
 
 3. Create the data directory:
@@ -66,7 +66,7 @@ A simple bookmarking service in memory of del.icio.us, built with vanilla PHP an
 2. Copy the entire `javascript:...` code
 3. Create a new bookmark in your browser
 4. Set the bookmark URL to the copied code
-5. Name it something like "Save to Pinboard"
+5. Name it something like "Save to del.icio.us"
 
 ## Usage
 
@@ -118,7 +118,7 @@ All API endpoints require authentication via session.
 ## File Structure
 
 ```
-pinboard-clone/
+del.icio.us-clone/
 ├── api/                    # API endpoints
 │   ├── auth.php
 │   ├── bookmarks.php
