@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bookmarklet Test</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+        .bookmarklet-code {
+            background: #f3f4f6;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            font-family: monospace;
+            word-break: break-all;
+            border: 2px solid #2563eb;
+        }
+        button {
+            background: #2563eb;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-size: 16px;
+            cursor: pointer;
+            margin: 10px 5px;
+        }
+        button:hover {
+            background: #1d4ed8;
+        }
+        .instructions {
+            background: #eff6ff;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        .test-area {
+            border: 2px dashed #9ca3af;
+            padding: 20px;
+            margin: 20px 0;
+            min-height: 100px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Bookmarklet Test Page</h1>
+    
+    <div class="instructions">
+        <h2>Instructions:</h2>
+        <ol>
+            <li>Select some text in the test area below</li>
+            <li>Click the "Test Bookmarklet" button</li>
+            <li>Or copy the bookmarklet code and create a bookmark with it</li>
+        </ol>
+    </div>
+    
+    <div class="test-area" contenteditable="true">
+        <p>This is a test paragraph. Select this text and try the bookmarklet!</p>
+        <p>You can also type your own text here to test selection.</p>
+    </div>
+    
+    <h2>Bookmarklet Code (copy this entire line):</h2>
+    <div class="bookmarklet-code" id="bookmarklet-code">
+        javascript:(function(){var q=location.href;var p=document.title;var d='';if(document.getSelection){d=document.getSelection().toString();}else if(window.getSelection){d=window.getSelection().toString();}var url='https://bookmarks.thoughton.co.uk/bookmarklet-popup.php?url='+encodeURIComponent(q)+'&title='+encodeURIComponent(p)+'&description='+encodeURIComponent(d);window.open(url,'bookmarklet','toolbar=no,scrollbars=yes,width=600,height=550,resizable=yes');})();
+    </div>
+    
+    <button onclick="copyBookmarklet()">Copy Bookmarklet Code</button>
+    <button onclick="testBookmarklet()">Test Bookmarklet</button>
+    
+    <script>
+        function copyBookmarklet() {
+            const code = document.getElementById('bookmarklet-code').textContent.trim();
+            navigator.clipboard.writeText(code).then(() => {
+                alert('Bookmarklet code copied to clipboard!');
+            }).catch(() => {
+                // Fallback
+                const textarea = document.createElement('textarea');
+                textarea.value = code;
+                document.body.appendChild(textarea);
+                textarea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textarea);
+                alert('Bookmarklet code copied to clipboard!');
+            });
+        }
+        
+        function testBookmarklet() {
+            const bookmarkletCode = document.getElementById('bookmarklet-code').textContent.trim();
+            // Extract the function part
+            const func = bookmarkletCode.replace('javascript:', '');
+            try {
+                eval(func);
+            } catch (e) {
+                alert('Error: ' + e.message);
+            }
+        }
+        
+        // Allow easy selection of the bookmarklet code
+        document.getElementById('bookmarklet-code').addEventListener('click', function() {
+            const range = document.createRange();
+            range.selectNodeContents(this);
+            const selection = window.getSelection();
+            selection.removeAllRanges();
+            selection.addRange(range);
+        });
+    </script>
+</body>
+</html>
+

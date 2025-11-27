@@ -1,0 +1,97 @@
+<?php
+// Database configuration
+define('DB_PATH', __DIR__ . '/../data/bookmarks.db');
+define('DB_DIR', __DIR__ . '/../data');
+
+// Ensure data directory exists
+if (!file_exists(DB_DIR)) {
+    mkdir(DB_DIR, 0755, true);
+}
+
+// Create database connection
+try {
+    $pdo = new PDO('sqlite:' . DB_PATH);
+    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+    $pdo->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
+    
+    // Enable foreign keys in SQLite
+    $pdo->exec('PRAGMA foreign_keys = ON');
+    
+    // Create tables if they don't exist
+    $schemaFile = __DIR__ . '/../sql/schema.sql';
+    if (file_exists($schemaFile)) {
+        $schema = file_get_contents($schemaFile);
+        // Split schema by semicolon and execute each statement
+        $statements = array_filter(array_map('trim', explode(';', $schema)));
+        foreach ($statements as $statement) {
+            if (!empty($statement)) {
+                $pdo->exec($statement);
+            }
+        }
+    }
+} catch (PDOException $e) {
+    die('Database connection failed: ' . $e->getMessage());
+}
+
+// Session configuration
+// Configure session cookies for security (especially important behind Cloudflare proxy)
+if (ini_get('session.use_cookies')) {
+    ini_set('session.cookie_httponly', 1);
+    // Only set secure flag if HTTPS is detected (Cloudflare proxy provides this)
+    if ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || 
+        (!empty($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https')) {
+        ini_set('session.cookie_secure', 1);
+    }
+    ini_set('session.cookie_samesite', 'Lax');
+    // Set session cookie lifetime to 1 year (31536000 seconds)
+    ini_set('session.cookie_lifetime', 31536000);
+    ini_set('session.gc_maxlifetime', 31536000);
+}
+
+// Start session
+session_start();
+
+// Check session age and regenerate if needed (max 1 year)
+if (isset($_SESSION['login_time'])) {
+    $sessionAge = time() - $_SESSION['login_time'];
+    $maxAge = 31536000; // 1 year in seconds
+    if ($sessionAge > $maxAge) {
+        // Session expired, destroy it
+        session_destroy();
+        session_start();
+    }
+}
+
+// Password hash for single user authentication
+// To set password: password_hash('your_password', PASSWORD_DEFAULT)
+// You can set this either as an environment variable OR as a constant below
+// Option 1: Environment variable (recommended for production)
+$passwordHash = getenv('PINBOARD_PASSWORD_HASH');
+
+// Option 2: Define directly in config (if environment variable not set)
+if (empty($passwordHash)) {
+    
+    // Uncomment and set your password hash here:
+    $passwordHash = 'your_generated_hash_here';
+    
+    // If neither is set, show error
+    if (empty($passwordHash)) {
+        die('Error: PINBOARD_PASSWORD_HASH environment variable must be set, or $passwordHash must be set in config.php. Generate hash using setup-password-web.php');
+    }
+}
+
+define('PASSWORD_HASH', $passwordHash);
+
+// Site configuration
+// Default values are hardcoded in index.php HTML below
+// To override defaults, uncomment and set custom values here:
+define('SITE_NAME', 'timhBookmarks');
+define('SITE_SUBTITLE', 'interesting links');
+
+// Check if user has defined custom values, otherwise leave undefined (will use HTML defaults)
+// If you want custom values, uncomment the defines above and set your values
+define('SITE_URL', $_SERVER['HTTP_HOST'] ?? 'localhost');
+
+// Timezone
+date_default_timezone_set('UTC');
+
