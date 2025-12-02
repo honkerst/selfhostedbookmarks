@@ -49,7 +49,7 @@ requireAuth();
                         
                         <div class="setting-item">
                             <p class="setting-description">
-                                Import bookmarks from a Netscape-style HTML file (exported from Chrome, Firefox, Safari, etc.).
+                                Import bookmarks from a Netscape-style HTML file (exported from Chrome, Firefox, Safari, etc.) or Pinboard JSON format.
                             </p>
                             
                             <div id="import-section">
@@ -59,10 +59,10 @@ requireAuth();
                                     </label>
                                     <input type="file" 
                                            id="bookmarks-file" 
-                                           accept=".html,.htm" 
+                                           accept=".html,.htm,.json" 
                                            class="setting-input">
                                     <p class="setting-description">
-                                        Select a Netscape-style bookmarks HTML file to import.
+                                        Select a bookmarks file to import. Supports Netscape-style HTML files (.html) or Pinboard JSON format (.json).
                                     </p>
                                 </div>
                                 
@@ -223,6 +223,7 @@ requireAuth();
             const file = fileInput.files[0];
             const additionalTags = tagsInput.value.trim();
             const filename = file.name;
+            const isJSON = filename.toLowerCase().endsWith('.json');
             
             // Read file
             const reader = new FileReader();
@@ -234,10 +235,10 @@ requireAuth();
                     statusDiv.className = 'import-status';
                     statusDiv.textContent = 'Importing bookmarks...';
                     
-                    const html = e.target.result;
+                    const content = e.target.result;
                     const tagsArray = additionalTags ? additionalTags.split(',').map(t => t.trim()).filter(t => t) : [];
                     
-                    const result = await API.importBookmarks(html, tagsArray, filename);
+                    const result = await API.importBookmarks(content, tagsArray, filename, isJSON ? 'pinboard' : 'netscape');
                     
                     if (result.success) {
                         statusDiv.className = 'import-status success-message';

@@ -104,13 +104,14 @@ const API = {
         return apiRequest('/import.php');
     },
     
-    importBookmarks: (html, additionalTags = [], filename = null) => {
+    importBookmarks: (content, additionalTags = [], filename = null, format = 'auto') => {
         return apiRequest('/import.php', {
             method: 'POST',
             body: {
-                html,
+                content: content,
                 additional_tags: Array.isArray(additionalTags) ? additionalTags : (additionalTags ? [additionalTags] : []),
-                filename: filename
+                filename: filename,
+                format: format
             }
         });
     },

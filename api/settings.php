@@ -19,8 +19,8 @@ switch ($method) {
             
             $settings = [];
             foreach ($rows as $row) {
-                // Handle pagination_per_page as string, others as boolean
-                if ($row['key'] === 'pagination_per_page') {
+                // Handle pagination_per_page and tag_threshold as string, others as boolean
+                if ($row['key'] === 'pagination_per_page' || $row['key'] === 'tag_threshold') {
                     $settings[$row['key']] = $row['value'];
                 } else {
                     $settings[$row['key']] = $row['value'] === '1' || $row['value'] === 'true';
@@ -32,7 +32,8 @@ switch ($method) {
                 'tags_alphabetical' => false,
                 'show_url' => true,
                 'show_datetime' => false,
-                'pagination_per_page' => '20'
+                'pagination_per_page' => '20',
+                'tag_threshold' => '2'
             ];
             
             foreach ($defaults as $key => $defaultValue) {
@@ -77,14 +78,14 @@ switch ($method) {
             }
             
             // Valid setting keys
-            $validKeys = ['tags_alphabetical', 'show_url', 'show_datetime', 'pagination_per_page'];
+            $validKeys = ['tags_alphabetical', 'show_url', 'show_datetime', 'pagination_per_page', 'tag_threshold'];
             
             foreach ($data['settings'] as $key => $value) {
                 if (!in_array($key, $validKeys)) {
                     continue; // Skip invalid keys
                 }
                 
-                // Handle pagination_per_page as string, others as boolean
+                // Handle pagination_per_page and tag_threshold as string, others as boolean
                 if ($key === 'pagination_per_page') {
                     // Validate pagination value
                     $validPaginationValues = ['1', '5', '10', '20', '50', '100', '250', '500', '1000', 'unlimited'];
@@ -92,6 +93,9 @@ switch ($method) {
                         continue; // Skip invalid pagination value
                     }
                     $dbValue = $value;
+                } elseif ($key === 'tag_threshold') {
+                    // Validate and ensure it's a non-negative integer
+                    $dbValue = (string)max(0, (int)$value);
                 } else {
                     // Convert boolean to string
                     $dbValue = ($value === true || $value === 'true' || $value === '1') ? '1' : '0';
@@ -113,8 +117,8 @@ switch ($method) {
             
             $settings = [];
             foreach ($rows as $row) {
-                // Handle pagination_per_page as string, others as boolean
-                if ($row['key'] === 'pagination_per_page') {
+                // Handle pagination_per_page and tag_threshold as string, others as boolean
+                if ($row['key'] === 'pagination_per_page' || $row['key'] === 'tag_threshold') {
                     $settings[$row['key']] = $row['value'];
                 } else {
                     $settings[$row['key']] = $row['value'] === '1' || $row['value'] === 'true';
@@ -126,7 +130,8 @@ switch ($method) {
                 'tags_alphabetical' => false,
                 'show_url' => true,
                 'show_datetime' => false,
-                'pagination_per_page' => '20'
+                'pagination_per_page' => '20',
+                'tag_threshold' => '2'
             ];
             
             foreach ($defaults as $key => $defaultValue) {

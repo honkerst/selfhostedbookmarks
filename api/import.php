@@ -64,6 +64,94 @@ function updateBookmarkTags($bookmarkId, $tags) {
 }
 
 /**
+ * Parse Pinboard JSON format
+ */
+function parsePinboardJSON($json, $additionalTags = []) {
+    $bookmarks = [];
+    
+    $data = json_decode($json, true);
+    
+    if (!is_array($data)) {
+        return [];
+    }
+    
+    foreach ($data as $item) {
+        if (!isset($item['href']) || empty($item['href'])) {
+            continue;
+        }
+        
+        $url = $item['href'];
+        
+        // Skip invalid URLs
+        if (!validateUrl($url)) {
+            continue;
+        }
+        
+        $title = isset($item['description']) ? trim($item['description']) : null;
+        $description = isset($item['extended']) ? trim($item['extended']) : null;
+        
+        // Parse tags - handle quoted multi-word tags
+        $tags = [];
+        if (isset($item['tags']) && !empty($item['tags'])) {
+            $tagsString = $item['tags'];
+            // Decode HTML entities (e.g., &quot; becomes ")
+            $tagsString = html_entity_decode($tagsString, ENT_QUOTES, 'UTF-8');
+            // Parse tags: space-separated, with quotes around multi-word tags
+            // Example: "time machine" "disk space" webdev
+            // Match quoted strings or single words
+            preg_match_all('/"([^"]+)"|(\S+)/', $tagsString, $matches);
+            // $matches[1] contains quoted tags, $matches[2] contains unquoted tags
+            foreach ($matches[1] as $tag) {
+                if (!empty(trim($tag))) {
+                    $tags[] = trim($tag);
+                }
+            }
+            foreach ($matches[2] as $tag) {
+                if (!empty(trim($tag))) {
+                    $tags[] = trim($tag);
+                }
+            }
+        }
+        
+        // Add additional tags
+        if (!empty($additionalTags)) {
+            $additionalTagsArray = is_array($additionalTags) ? $additionalTags : parseTags($additionalTags);
+            $tags = array_merge($tags, $additionalTagsArray);
+        }
+        
+        // Remove duplicates and normalize
+        $tags = array_unique(array_map('strtolower', array_map('trim', $tags)));
+        $tags = array_filter($tags);
+        
+        // Handle privacy: Pinboard "shared" = "yes" means public, "no" means private
+        // But we'll ignore this for now and let the import process handle it
+        // (Pinboard format doesn't map directly to our is_private field in the import)
+        
+        // Handle timestamp
+        $createdAt = null;
+        if (isset($item['time']) && !empty($item['time'])) {
+            try {
+                $date = new DateTime($item['time']);
+                $createdAt = $date->format('Y-m-d H:i:s');
+            } catch (Exception $e) {
+                // Invalid date, ignore
+            }
+        }
+        
+        $bookmarks[] = [
+            'url' => $url,
+            'title' => $title ?: null,
+            'description' => $description ?: null,
+            'tags' => array_values($tags),
+            'created_at' => $createdAt,
+            'is_private' => (isset($item['shared']) && $item['shared'] === 'no') ? 1 : 0
+        ];
+    }
+    
+    return $bookmarks;
+}
+
+/**
  * Parse Netscape-style bookmarks HTML
  */
 function parseNetscapeBookmarks($html, $additionalTags = []) {
@@ -212,18 +300,35 @@ switch ($method) {
         }
         
         try {
-            $html = $data['html'] ?? '';
+            $content = $data['content'] ?? $data['html'] ?? '';
             $additionalTags = $data['additional_tags'] ?? [];
             $filename = $data['filename'] ?? null;
+            $format = $data['format'] ?? 'auto'; // 'auto', 'netscape', 'pinboard'
             
-            if (empty($html)) {
+            if (empty($content)) {
                 http_response_code(400);
-                echo json_encode(['error' => 'Bookmarks HTML is required']);
+                echo json_encode(['error' => 'Bookmarks file content is required']);
                 exit;
             }
             
-            // Parse bookmarks
-            $parsedBookmarks = parseNetscapeBookmarks($html, $additionalTags);
+            // Auto-detect format if not specified
+            if ($format === 'auto') {
+                // Try to parse as JSON first (Pinboard format)
+                $jsonData = json_decode($content, true);
+                if (is_array($jsonData) && !empty($jsonData) && isset($jsonData[0]['href'])) {
+                    $format = 'pinboard';
+                } else {
+                    // Assume Netscape HTML format
+                    $format = 'netscape';
+                }
+            }
+            
+            // Parse bookmarks based on format
+            if ($format === 'pinboard') {
+                $parsedBookmarks = parsePinboardJSON($content, $additionalTags);
+            } else {
+                $parsedBookmarks = parseNetscapeBookmarks($content, $additionalTags);
+            }
             
             if (empty($parsedBookmarks)) {
                 http_response_code(400);
@@ -245,6 +350,8 @@ switch ($method) {
                     $title = $bookmark['title'];
                     $description = $bookmark['description'];
                     $tags = $bookmark['tags'];
+                    $isPrivate = isset($bookmark['is_private']) ? (int)$bookmark['is_private'] : 0;
+                    $createdAt = $bookmark['created_at'] ?? null;
                     
                     // Validate input lengths
                     try {
@@ -281,8 +388,13 @@ switch ($method) {
                             $stmt = $pdo->prepare("UPDATE bookmarks SET description = ?, updated_at = datetime('now') WHERE id = ?");
                             $stmt->execute([$description, $existing['id']]);
                         }
+                        // Update privacy if provided
+                        if (isset($bookmark['is_private'])) {
+                            $stmt = $pdo->prepare("UPDATE bookmarks SET is_private = ?, updated_at = datetime('now') WHERE id = ?");
+                            $stmt->execute([$isPrivate, $existing['id']]);
+                        }
                         // Always update the updated_at timestamp
-                        if (($title === '' || $title === null) && ($description === '' || $description === null)) {
+                        if (($title === '' || $title === null) && ($description === '' || $description === null) && !isset($bookmark['is_private'])) {
                             $stmt = $pdo->prepare("UPDATE bookmarks SET updated_at = datetime('now') WHERE id = ?");
                             $stmt->execute([$existing['id']]);
                         }
@@ -290,11 +402,20 @@ switch ($method) {
                         $updatedCount++;
                     } else {
                         // Insert new bookmark
-                        $stmt = $pdo->prepare("
-                            INSERT INTO bookmarks (url, title, description, is_private, created_at, updated_at)
-                            VALUES (?, ?, ?, 0, datetime('now'), datetime('now'))
-                        ");
-                        $stmt->execute([$url, $title, $description]);
+                        $createdAtValue = $createdAt ? $createdAt : "datetime('now')";
+                        if ($createdAt) {
+                            $stmt = $pdo->prepare("
+                                INSERT INTO bookmarks (url, title, description, is_private, created_at, updated_at)
+                                VALUES (?, ?, ?, ?, ?, datetime('now'))
+                            ");
+                            $stmt->execute([$url, $title, $description, $isPrivate, $createdAt]);
+                        } else {
+                            $stmt = $pdo->prepare("
+                                INSERT INTO bookmarks (url, title, description, is_private, created_at, updated_at)
+                                VALUES (?, ?, ?, ?, datetime('now'), datetime('now'))
+                            ");
+                            $stmt->execute([$url, $title, $description, $isPrivate]);
+                        }
                         $bookmarkId = $pdo->lastInsertId();
                         $createdCount++;
                     }

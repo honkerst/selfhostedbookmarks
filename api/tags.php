@@ -44,39 +44,62 @@ switch ($method) {
                 }
             } else {
                 // Get all tags with counts
-                if ($isAuthenticated) {
-                    $stmt = $pdo->query("
-                        SELECT t.name, COUNT(bt.bookmark_id) as count
-                        FROM tags t
-                        LEFT JOIN bookmark_tags bt ON t.id = bt.tag_id
-                        GROUP BY t.id, t.name
-                        HAVING COUNT(bt.bookmark_id) > 0
-                        ORDER BY count DESC, t.name ASC
-                    ");
+                // Get tag threshold from settings (default to 0 to show all tags)
+                $thresholdStmt = $pdo->prepare("SELECT value FROM settings WHERE key = 'tag_threshold'");
+                $thresholdStmt->execute();
+                $thresholdRow = $thresholdStmt->fetch();
+                // If threshold is not set, default to 0 (show all tags)
+                // Otherwise use the value from settings, ensuring it's at least 0
+                if ($thresholdRow && $thresholdRow['value'] !== null && $thresholdRow['value'] !== '') {
+                    $threshold = max(0, (int)$thresholdRow['value']);
                 } else {
-                    $stmt = $pdo->query("
+                    $threshold = 0; // Default to 0 to show all tags
+                }
+                
+                if ($isAuthenticated) {
+                    // For authenticated users, count all bookmarks
+                    // SQLite PDO has issues with parameter binding in HAVING clauses, so we filter in PHP
+                    $sql = "
                         SELECT t.name, COUNT(bt.bookmark_id) as count
                         FROM tags t
-                        LEFT JOIN bookmark_tags bt ON t.id = bt.tag_id
-                        LEFT JOIN bookmarks b ON bt.bookmark_id = b.id
-                        WHERE b.is_private = 0 OR b.is_private IS NULL
+                        INNER JOIN bookmark_tags bt ON t.id = bt.tag_id
                         GROUP BY t.id, t.name
-                        HAVING COUNT(bt.bookmark_id) > 0
                         ORDER BY count DESC, t.name ASC
-                    ");
+                    ";
+                    $stmt = $pdo->prepare($sql);
+                    $stmt->execute();
+                } else {
+                    // For non-authenticated users, only count public bookmarks
+                    // SQLite PDO has issues with parameter binding in HAVING clauses, so we filter in PHP
+                    $sql = "
+                        SELECT t.name, COUNT(bt.bookmark_id) as count
+                        FROM tags t
+                        INNER JOIN bookmark_tags bt ON t.id = bt.tag_id
+                        INNER JOIN bookmarks b ON bt.bookmark_id = b.id
+                        WHERE b.is_private = 0
+                        GROUP BY t.id, t.name
+                        ORDER BY count DESC, t.name ASC
+                    ";
+                    $stmt = $pdo->prepare($sql);
+                    $stmt->execute();
                 }
             }
             
             $tags = $stmt->fetchAll();
             
-            // Filter out any tags with count 0 (as a safety measure)
-            $tags = array_filter($tags, function($tag) {
-                return isset($tag['count']) && (int)$tag['count'] > 0;
+            // Convert count to integer
+            $tags = array_map(function($tag) {
+                $tag['count'] = (int)$tag['count'];
+                return $tag;
+            }, $tags);
+            
+            // Filter by threshold in PHP (SQLite PDO has issues with parameter binding in HAVING clauses)
+            $tags = array_filter($tags, function($tag) use ($threshold) {
+                return isset($tag['count']) && $tag['count'] >= $threshold && $tag['count'] > 0;
             });
             
             // Re-index array after filtering
             $tags = array_values($tags);
-            
             echo json_encode(['tags' => $tags]);
         } catch (PDOException $e) {
             http_response_code(500);

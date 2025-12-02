@@ -19,11 +19,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'tags_alphabetical' => isset($_POST['tags_alphabetical']) && $_POST['tags_alphabetical'] === '1',
                 'show_url' => isset($_POST['show_url']) && $_POST['show_url'] === '1',
                 'show_datetime' => isset($_POST['show_datetime']) && $_POST['show_datetime'] === '1',
-                'pagination_per_page' => $_POST['pagination_per_page'] ?? '20'
+                'pagination_per_page' => $_POST['pagination_per_page'] ?? '20',
+                'tag_threshold' => isset($_POST['tag_threshold']) ? max(0, (int)$_POST['tag_threshold']) : '2'
             ];
         
         // Save directly to database
-        $validKeys = ['tags_alphabetical', 'show_url', 'show_datetime', 'pagination_per_page'];
+        $validKeys = ['tags_alphabetical', 'show_url', 'show_datetime', 'pagination_per_page', 'tag_threshold'];
         
         foreach ($settings as $key => $value) {
             if (!in_array($key, $validKeys)) {
@@ -31,8 +32,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             
             // Handle boolean vs string values
-            if ($key === 'pagination_per_page') {
-                $dbValue = $value; // Store as string
+            if ($key === 'pagination_per_page' || $key === 'tag_threshold') {
+                $dbValue = (string)$value; // Store as string
             } else {
                 $dbValue = $value ? '1' : '0';
             }
@@ -63,8 +64,8 @@ try {
     
     $currentSettings = [];
     foreach ($rows as $row) {
-        // Handle pagination_per_page as string, others as boolean
-        if ($row['key'] === 'pagination_per_page') {
+        // Handle pagination_per_page and tag_threshold as string, others as boolean
+        if ($row['key'] === 'pagination_per_page' || $row['key'] === 'tag_threshold') {
             $currentSettings[$row['key']] = $row['value'];
         } else {
             $currentSettings[$row['key']] = $row['value'] === '1' || $row['value'] === 'true';
@@ -76,12 +77,14 @@ try {
     $currentSettings['show_url'] = $currentSettings['show_url'] ?? true;
     $currentSettings['show_datetime'] = $currentSettings['show_datetime'] ?? false;
     $currentSettings['pagination_per_page'] = $currentSettings['pagination_per_page'] ?? '20';
+    $currentSettings['tag_threshold'] = $currentSettings['tag_threshold'] ?? '2';
 } catch (PDOException $e) {
     $currentSettings = [
         'tags_alphabetical' => false,
         'show_url' => true,
         'show_datetime' => false,
-        'pagination_per_page' => '20'
+        'pagination_per_page' => '20',
+        'tag_threshold' => '2'
     ];
 }
 ?>
@@ -198,6 +201,22 @@ try {
                             </select>
                             <p class="setting-description">
                                 Number of bookmarks to display per page. "Unlimited" will show all bookmarks on a single page.
+                            </p>
+                        </div>
+                        
+                        <div class="setting-item">
+                            <label for="tag_threshold" class="setting-label">
+                                Tag threshold (minimum count):
+                            </label>
+                            <input type="number" 
+                                   id="tag_threshold" 
+                                   name="tag_threshold" 
+                                   min="0" 
+                                   value="<?php echo h($currentSettings['tag_threshold'] ?? '2'); ?>" 
+                                   class="setting-input"
+                                   style="max-width: 150px;">
+                            <p class="setting-description">
+                                Only show tags in the sidebar that have been used at least this many times. Default is 2.
                             </p>
                         </div>
                     </div>
