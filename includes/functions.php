@@ -11,12 +11,12 @@ function h($string) {
 }
 
 /**
- * Format date for display
+ * Format date for display (UK format: 28 Dec 2005)
  */
 function formatDate($datetime) {
     if (!$datetime) return '';
     $date = new DateTime($datetime);
-    return $date->format('M j, Y');
+    return $date->format('j M Y');
 }
 
 /**

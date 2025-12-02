@@ -17,7 +17,7 @@ async function apiRequest(endpoint, options = {}) {
     
     if (config.body && typeof config.body === 'object') {
         // Add CSRF token to request body for state-changing methods
-        if (['POST', 'PUT'].includes(config.method || 'GET')) {
+        if (['POST', 'PUT', 'DELETE'].includes(config.method || 'GET')) {
             if (window.CSRF_TOKEN) {
                 config.body.csrf_token = window.CSRF_TOKEN;
             }
@@ -96,6 +96,31 @@ const API = {
         return apiRequest('/settings.php', {
             method: 'PUT',
             body: { settings }
+        });
+    },
+    
+    // Import
+    getImports: () => {
+        return apiRequest('/import.php');
+    },
+    
+    importBookmarks: (html, additionalTags = [], filename = null) => {
+        return apiRequest('/import.php', {
+            method: 'POST',
+            body: {
+                html,
+                additional_tags: Array.isArray(additionalTags) ? additionalTags : (additionalTags ? [additionalTags] : []),
+                filename: filename
+            }
+        });
+    },
+    
+    undoImport: (importId) => {
+        return apiRequest('/import.php', {
+            method: 'DELETE',
+            body: {
+                import_id: importId
+            }
         });
     },
     

@@ -707,10 +707,151 @@ body {
 
 .setting-description {
     margin-top: 0.5rem;
-    margin-left: 2rem;
     font-size: 0.875rem;
     color: var(--text-light);
     line-height: 1.5;
+}
+
+/* Only add left margin when description follows a toggle label (to align with checkbox) */
+.toggle-label + .setting-description {
+    margin-left: 2rem;
+}
+
+.setting-input {
+    width: 100%;
+    max-width: 500px;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    font-size: 1rem;
+    background: var(--bg-color);
+    color: var(--text-color);
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.setting-input:hover {
+    border-color: var(--primary-color);
+}
+
+.setting-input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.setting-input[type="file"] {
+    padding: 0.5rem;
+    cursor: pointer;
+}
+
+.import-status {
+    margin-top: 1rem;
+    padding: 1rem;
+    border-radius: var(--border-radius);
+    font-size: 0.875rem;
+    line-height: 1.5;
+}
+
+.import-status.success-message {
+    background-color: #d1fae5;
+    color: #065f46;
+    border: 1px solid #6ee7b7;
+}
+
+.import-status.error-message {
+    background-color: #fee2e2;
+    color: #991b1b;
+    border: 1px solid #fca5a5;
+}
+
+/* Import History */
+.import-history-section {
+    margin-top: 3rem;
+}
+
+.import-history-section h2 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin-bottom: 1.5rem;
+    color: var(--text-color);
+}
+
+.imports-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.import-record {
+    background: var(--bg-color);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    padding: 1.5rem;
+    box-shadow: var(--shadow);
+}
+
+.import-record-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 1rem;
+    gap: 1rem;
+}
+
+.import-record-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.import-record-info strong {
+    font-size: 1.1rem;
+    color: var(--text-color);
+}
+
+.import-record-date {
+    font-size: 0.875rem;
+    color: var(--text-light);
+}
+
+.import-record-details {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    font-size: 0.875rem;
+    color: var(--text-light);
+}
+
+.import-record-details span {
+    padding: 0.25rem 0.5rem;
+    background: var(--bg-secondary);
+    border-radius: 4px;
+}
+
+.import-tags {
+    font-style: italic;
+}
+
+.undo-import-btn {
+    flex-shrink: 0;
+}
+
+/* Responsive adjustments for import history */
+@media (max-width: 768px) {
+    .import-record-header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .undo-import-btn {
+        width: 100%;
+    }
+    
+    .import-record-details {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
 }
 
 /* Responsive */

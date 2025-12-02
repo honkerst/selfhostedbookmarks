@@ -436,7 +436,7 @@ function formatDate(dateString, showDateTime = false) {
     const date = new Date(dateString);
     
     if (showDateTime) {
-        return date.toLocaleString('en-US', { 
+        return date.toLocaleString('en-GB', { 
             year: 'numeric', 
             month: 'short', 
             day: 'numeric',
@@ -444,7 +444,7 @@ function formatDate(dateString, showDateTime = false) {
             minute: '2-digit'
         });
     } else {
-        return date.toLocaleDateString('en-US', { 
+        return date.toLocaleDateString('en-GB', { 
             year: 'numeric', 
             month: 'short', 
             day: 'numeric' 

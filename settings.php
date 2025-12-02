@@ -176,7 +176,7 @@ try {
                                 </span>
                             </label>
                             <p class="setting-description">
-                                When enabled, shows the full date and time (e.g., "Dec 25, 2024 14:30"). When disabled, shows only the date (e.g., "Dec 25, 2024").
+                                When enabled, shows the full date and time (e.g., "25 Dec, 2024 14:30"). When disabled, shows only the date (e.g., "25 Dec, 2024").
                             </p>
                         </div>
                         
@@ -202,6 +202,19 @@ try {
                         </div>
                     </div>
                     
+                    <div class="settings-group">
+                        <h3>Import Bookmarks</h3>
+                        
+                        <div class="setting-item">
+                            <p class="setting-description">
+                                Import bookmarks from a Netscape-style HTML file (exported from Chrome, Firefox, Safari, etc.).
+                            </p>
+                            <div class="form-group">
+                                <a href="/import.php" class="btn btn-primary">Go to Import Page</a>
+                            </div>
+                        </div>
+                    </div>
+                    
                     <div class="form-actions">
                         <button type="submit" class="btn btn-primary">Save Settings</button>
                         <a href="/index.php" class="btn">Cancel</a>
@@ -211,22 +224,15 @@ try {
         </main>
     </div>
     
+    <script src="/assets/js/api.js"></script>
     <script>
+        // Set CSRF token
+        window.CSRF_TOKEN = '<?php echo generateCSRFToken(); ?>';
+        
         // Logout handler
         document.getElementById('logout-btn')?.addEventListener('click', async () => {
             try {
-                const formData = new URLSearchParams();
-                formData.append('action', 'logout');
-                
-                await fetch('/api/auth.php', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded',
-                    },
-                    credentials: 'same-origin',
-                    body: formData
-                });
-                
+                await API.logout();
                 window.location.href = '/login.php';
             } catch (error) {
                 console.error('Logout failed:', error);
