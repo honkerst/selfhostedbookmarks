@@ -12,6 +12,7 @@ $method = $_SERVER['REQUEST_METHOD'];
 switch ($method) {
     case 'GET':
         $query = $_GET['q'] ?? '';
+        $all = isset($_GET['all']) && $_GET['all'] === '1';
         
         try {
             if (!empty($query)) {
@@ -45,15 +46,20 @@ switch ($method) {
             } else {
                 // Get all tags with counts
                 // Get tag threshold from settings (default to 0 to show all tags)
-                $thresholdStmt = $pdo->prepare("SELECT value FROM settings WHERE key = 'tag_threshold'");
-                $thresholdStmt->execute();
-                $thresholdRow = $thresholdStmt->fetch();
-                // If threshold is not set, default to 0 (show all tags)
-                // Otherwise use the value from settings, ensuring it's at least 0
-                if ($thresholdRow && $thresholdRow['value'] !== null && $thresholdRow['value'] !== '') {
-                    $threshold = max(0, (int)$thresholdRow['value']);
+                // If 'all' parameter is set, bypass threshold (for management page)
+                if ($all) {
+                    $threshold = 0; // Show all tags regardless of threshold
                 } else {
-                    $threshold = 0; // Default to 0 to show all tags
+                    $thresholdStmt = $pdo->prepare("SELECT value FROM settings WHERE key = 'tag_threshold'");
+                    $thresholdStmt->execute();
+                    $thresholdRow = $thresholdStmt->fetch();
+                    // If threshold is not set, default to 0 (show all tags)
+                    // Otherwise use the value from settings, ensuring it's at least 0
+                    if ($thresholdRow && $thresholdRow['value'] !== null && $thresholdRow['value'] !== '') {
+                        $threshold = max(0, (int)$thresholdRow['value']);
+                    } else {
+                        $threshold = 0; // Default to 0 to show all tags
+                    }
                 }
                 
                 if ($isAuthenticated) {
@@ -101,6 +107,60 @@ switch ($method) {
             // Re-index array after filtering
             $tags = array_values($tags);
             echo json_encode(['tags' => $tags]);
+        } catch (PDOException $e) {
+            http_response_code(500);
+            echo json_encode(['error' => 'Database error occurred']);
+        } catch (Exception $e) {
+            http_response_code(500);
+            echo json_encode(['error' => 'An error occurred']);
+        }
+        break;
+        
+    case 'DELETE':
+        // Delete tag requires authentication
+        if (!$isAuthenticated) {
+            http_response_code(401);
+            echo json_encode(['error' => 'Unauthorized']);
+            exit;
+        }
+        
+        // Verify CSRF token
+        $data = json_decode(file_get_contents('php://input'), true);
+        $csrfToken = $data['csrf_token'] ?? '';
+        if (!verifyCSRFToken($csrfToken)) {
+            http_response_code(403);
+            echo json_encode(['error' => 'Invalid security token']);
+            exit;
+        }
+        
+        try {
+            $tagName = $data['name'] ?? '';
+            
+            if (empty($tagName)) {
+                http_response_code(400);
+                echo json_encode(['error' => 'Tag name is required']);
+                exit;
+            }
+            
+            // Get tag ID
+            $stmt = $pdo->prepare("SELECT id FROM tags WHERE name = ?");
+            $stmt->execute([$tagName]);
+            $tag = $stmt->fetch();
+            
+            if (!$tag) {
+                http_response_code(404);
+                echo json_encode(['error' => 'Tag not found']);
+                exit;
+            }
+            
+            // Delete the tag (CASCADE will automatically remove bookmark_tags associations)
+            $stmt = $pdo->prepare("DELETE FROM tags WHERE id = ?");
+            $stmt->execute([$tag['id']]);
+            
+            echo json_encode([
+                'success' => true,
+                'message' => 'Tag deleted successfully'
+            ]);
         } catch (PDOException $e) {
             http_response_code(500);
             echo json_encode(['error' => 'Database error occurred']);

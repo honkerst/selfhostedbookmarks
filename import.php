@@ -33,6 +33,7 @@ requireAuth();
                 </div>
                 <nav class="header-nav">
                     <a href="/index.php" class="btn btn-small">← Dashboard</a>
+                    <a href="/tags.php" class="btn btn-small">Tags</a>
                     <a href="/settings.php" class="btn btn-small">Settings</a>
                     <button id="logout-btn" class="btn btn-small">Logout</button>
                 </nav>

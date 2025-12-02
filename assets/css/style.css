@@ -776,6 +776,57 @@ body {
     border: 1px solid #fca5a5;
 }
 
+/* Tags Management Page */
+.tags-management-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.tag-management-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+    background: var(--bg-color);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    transition: background 0.2s;
+}
+
+.tag-management-item:hover {
+    background: var(--bg-dark);
+}
+
+.tag-management-info {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex: 1;
+}
+
+.tag-management-name {
+    font-weight: 500;
+    color: var(--primary-color);
+    font-size: 1rem;
+}
+
+.tag-management-count {
+    color: var(--text-light);
+    font-size: 0.875rem;
+}
+
+.btn-danger {
+    background-color: #dc2626;
+    color: white;
+    border-color: #dc2626;
+}
+
+.btn-danger:hover {
+    background-color: #b91c1c;
+    border-color: #b91c1c;
+}
+
 /* Import History */
 .import-history-section {
     margin-top: 3rem;

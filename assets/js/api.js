@@ -70,8 +70,25 @@ const API = {
     },
     
     // Tags
-    getTags: (query = '') => {
-        return apiRequest('/tags.php' + (query ? `?q=${encodeURIComponent(query)}` : ''));
+    getTags: (all = false, query = '') => {
+        const params = new URLSearchParams();
+        if (query) {
+            params.append('q', query);
+        }
+        if (all) {
+            params.append('all', '1');
+        }
+        const queryString = params.toString();
+        return apiRequest('/tags.php' + (queryString ? '?' + queryString : ''));
+    },
+    
+    deleteTag: (tagName) => {
+        return apiRequest('/tags.php', {
+            method: 'DELETE',
+            body: {
+                name: tagName
+            }
+        });
     },
     
     // Bookmarklet - get existing bookmark by URL
@@ -96,6 +113,16 @@ const API = {
         return apiRequest('/settings.php', {
             method: 'PUT',
             body: { settings }
+        });
+    },
+    
+    // Tags
+    deleteTag: (tagName) => {
+        return apiRequest('/tags.php', {
+            method: 'DELETE',
+            body: {
+                name: tagName
+            }
         });
     },
     

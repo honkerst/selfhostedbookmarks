@@ -41,6 +41,7 @@ header('Expires: 0');
                 </div>
                 <nav class="header-nav">
                     <?php if ($isAuthenticated): ?>
+                        <a href="/tags.php" class="btn btn-small">Tags</a>
                         <a href="/settings.php" class="btn btn-small">Settings</a>
                         <button id="logout-btn" class="btn btn-small">Logout</button>
                     <?php else: ?>
