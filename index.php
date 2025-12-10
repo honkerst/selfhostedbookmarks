@@ -82,22 +82,6 @@ header('Expires: 0');
                     <div id="tags-sidebar" class="tags-sidebar">
                         <!-- Tags will be loaded here -->
                     </div>
-                    <?php if ($isAuthenticated): ?>
-                    <div class="bookmarklet-sidebar">
-                        <h3>Bookmarklet</h3>
-                        <p class="bookmarklet-instructions">
-                            To install: Drag the link below to your bookmarks bar
-                        </p>
-                        <a href="javascript:(function(){var q=location.href;var p=document.title;var d='';if(document.getSelection){d=document.getSelection().toString();}else if(window.getSelection){d=window.getSelection().toString();}var url='https://bookmarks.thoughton.co.uk/bookmarklet-popup.php?url='+encodeURIComponent(q)+'&title='+encodeURIComponent(p)+'&description='+encodeURIComponent(d);window.open(url,'bookmarklet','toolbar=no,scrollbars=yes,width=600,height=550,resizable=yes');})();" 
-                           class="bookmarklet-link"
-                           id="bookmarklet-link">
-                            +📌
-                        </a>
-                        <p class="bookmarklet-help">
-                            Use this bookmarklet to quickly save any webpage. Select text on the page to include it as the description.
-                        </p>
-                    </div>
-                    <?php endif; ?>
                 </aside>
             </div>
         </main>

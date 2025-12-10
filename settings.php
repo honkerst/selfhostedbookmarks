@@ -268,6 +268,37 @@ try {
                     </div>
                     
                     <div class="settings-group">
+                        <h3>Bookmarklet</h3>
+                        
+                        <div class="setting-item">
+                            <p class="setting-description">
+                                The bookmarklet allows you to quickly save any webpage to your bookmarks. To install:
+                            </p>
+                            <ol class="setting-description" style="margin-left: 1.5rem; margin-top: 0.5rem;">
+                                <li>Drag the link below to your browser's bookmarks bar</li>
+                                <li>Or right-click the link and select "Bookmark this link"</li>
+                            </ol>
+                            <div style="margin-top: 1rem;">
+                                <?php
+                                // Generate base URL dynamically
+                                $protocol = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') ? 'https' : 'http';
+                                $host = $_SERVER['HTTP_HOST'];
+                                $baseUrl = $protocol . '://' . $host;
+                                $bookmarkletUrl = "javascript:(function(){var q=location.href;var p=document.title;var d='';if(document.getSelection){d=document.getSelection().toString();}else if(window.getSelection){d=window.getSelection().toString();}var url='{$baseUrl}/bookmarklet-popup.php?url='+encodeURIComponent(q)+'&title='+encodeURIComponent(p)+'&description='+encodeURIComponent(d);window.open(url,'bookmarklet','toolbar=no,scrollbars=yes,width=600,height=550,resizable=yes');})();";
+                                ?>
+                                <a href="<?php echo h($bookmarkletUrl); ?>" 
+                                   class="bookmarklet-link"
+                                   style="display: inline-block; background: var(--primary-color); color: white; padding: 0.75rem 1rem; border-radius: var(--border-radius); text-decoration: none; font-weight: 500; transition: background 0.2s;">
+                                    +📌 Add to <?php echo h(defined('SITE_NAME') ? SITE_NAME : 'SelfHostedBookmarks'); ?>
+                                </a>
+                            </div>
+                            <p class="setting-description" style="margin-top: 1rem;">
+                                <strong>Tip:</strong> Select text on a webpage before clicking the bookmarklet to include it as the description.
+                            </p>
+                        </div>
+                    </div>
+                    
+                    <div class="settings-group">
                         <h3>Import Bookmarks</h3>
                         
                         <div class="setting-item">
