@@ -18,9 +18,10 @@ switch ($method) {
             $rows = $stmt->fetchAll();
             
             $settings = [];
+            $stringSettings = ['pagination_per_page', 'tag_threshold', 'wp_base_url', 'wp_user', 'wp_app_password', 'wp_watch_tag', 'wp_post_tags', 'wp_post_categories', 'shb_base_url', 'wp_connection_tested'];
             foreach ($rows as $row) {
-                // Handle pagination_per_page and tag_threshold as string, others as boolean
-                if ($row['key'] === 'pagination_per_page' || $row['key'] === 'tag_threshold') {
+                // Handle string settings vs boolean settings
+                if (in_array($row['key'], $stringSettings)) {
                     $settings[$row['key']] = $row['value'];
                 } else {
                     $settings[$row['key']] = $row['value'] === '1' || $row['value'] === 'true';
@@ -33,12 +34,28 @@ switch ($method) {
                 'show_url' => true,
                 'show_datetime' => false,
                 'pagination_per_page' => '20',
-                'tag_threshold' => '2'
+                'tag_threshold' => '2',
+                'wp_base_url' => '',
+                'wp_user' => '',
+                'wp_app_password' => '',
+                'wp_watch_tag' => '',
+                'wp_post_tags' => '',
+                'wp_post_categories' => '',
+                'shb_base_url' => '',
+                'wp_connection_tested' => '0'
             ];
             
             foreach ($defaults as $key => $defaultValue) {
                 if (!isset($settings[$key])) {
                     $settings[$key] = $defaultValue;
+                }
+            }
+            
+            // For string settings, ensure they're returned as strings
+            $stringSettings = ['pagination_per_page', 'tag_threshold', 'wp_base_url', 'wp_user', 'wp_app_password', 'wp_watch_tag', 'wp_post_tags', 'wp_post_categories', 'shb_base_url'];
+            foreach ($stringSettings as $key) {
+                if (isset($settings[$key])) {
+                    $settings[$key] = (string)$settings[$key];
                 }
             }
             

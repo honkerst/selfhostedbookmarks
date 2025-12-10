@@ -174,6 +174,25 @@ const API = {
             }
             return data;
         });
+    },
+
+    // WordPress
+    testWpConnection: () => {
+        return apiRequest('/wp-test-connection.php', {
+            method: 'POST',
+            body: {}
+        });
+    },
+
+    checkWpBookmarkExists: (bookmarkId) => {
+        return apiRequest(`/wp-publish.php?bookmark_id=${bookmarkId}`);
+    },
+
+    publishToWordPress: (bookmarkId) => {
+        return apiRequest('/wp-publish.php', {
+            method: 'POST',
+            body: { bookmark_id: bookmarkId }
+        });
     }
 };
 

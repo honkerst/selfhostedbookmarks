@@ -30,6 +30,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'wp_post_tags' => trim($_POST['wp_post_tags'] ?? ''),
                 'wp_post_categories' => trim($_POST['wp_post_categories'] ?? '')
             ];
+            
+            // Clear connection tested flag when WP settings change
+            $stmt = $pdo->prepare("
+                INSERT INTO settings (key, value, updated_at)
+                VALUES ('wp_connection_tested', '0', datetime('now'))
+                ON CONFLICT(key) DO UPDATE SET
+                    value = '0',
+                    updated_at = datetime('now')
+            ");
+            $stmt->execute();
         
         // Save directly to database
         $validKeys = [
@@ -84,9 +94,10 @@ try {
     $rows = $stmt->fetchAll();
     
     $currentSettings = [];
+    $stringSettings = ['pagination_per_page', 'tag_threshold', 'shb_base_url', 'wp_base_url', 'wp_user', 'wp_app_password', 'wp_watch_tag', 'wp_post_tags', 'wp_post_categories', 'wp_connection_tested'];
     foreach ($rows as $row) {
-        // Handle pagination_per_page and tag_threshold as string, others as boolean
-        if (in_array($row['key'], ['pagination_per_page', 'tag_threshold', 'shb_base_url', 'wp_base_url', 'wp_user', 'wp_app_password', 'wp_watch_tag', 'wp_post_tags', 'wp_post_categories'])) {
+        // Handle string settings vs boolean settings
+        if (in_array($row['key'], $stringSettings)) {
             $currentSettings[$row['key']] = $row['value'];
         } else {
             $currentSettings[$row['key']] = $row['value'] === '1' || $row['value'] === 'true';
@@ -99,6 +110,7 @@ try {
     $currentSettings['show_datetime'] = $currentSettings['show_datetime'] ?? false;
     $currentSettings['pagination_per_page'] = $currentSettings['pagination_per_page'] ?? '20';
     $currentSettings['tag_threshold'] = $currentSettings['tag_threshold'] ?? '2';
+    $currentSettings['wp_connection_tested'] = $currentSettings['wp_connection_tested'] ?? '0';
     $currentSettings['wp_base_url'] = $currentSettings['wp_base_url'] ?? '';
     $currentSettings['wp_user'] = $currentSettings['wp_user'] ?? '';
     $currentSettings['wp_app_password'] = $currentSettings['wp_app_password'] ?? '';
@@ -312,6 +324,14 @@ try {
                             <p class="setting-description" style="margin-top: 0.5rem; color: var(--text-light); font-size: 0.875rem;">
                                 <strong>Security Note:</strong> This password is stored in plaintext in the database (not encrypted) because WordPress REST API authentication requires the actual password value. The SHB settings page is protected by authentication—only logged-in users can access it. To keep your credentials secure: ensure your SHB installation requires a strong password, use HTTPS, and don't share your login credentials. If your database is compromised, regenerate this application password in WordPress.
                             </p>
+                            <div class="form-group" style="margin-top: 1rem;">
+                                <button type="button" id="test-wp-connection" class="btn btn-small">Test Connection</button>
+                                <span id="wp-connection-status" style="margin-left: 1rem; <?php echo ($currentSettings['wp_connection_tested'] === '1') ? 'color: var(--success-color);' : ''; ?>">
+                                    <?php if ($currentSettings['wp_connection_tested'] === '1'): ?>
+                                        ✓ Connection verified
+                                    <?php endif; ?>
+                                </span>
+                            </div>
                         </div>
 
                         <div class="setting-item">
@@ -458,6 +478,64 @@ WP_BASE_URL="https://thoughton.co.uk" WP_USER="tim" WP_APP_PASSWORD="..." /usr/b
 
         // Update on page load
         updateCronExample();
+
+        // Test WordPress connection
+        document.getElementById('test-wp-connection')?.addEventListener('click', async () => {
+            const btn = document.getElementById('test-wp-connection');
+            const status = document.getElementById('wp-connection-status');
+            if (!btn || !status) return;
+
+            btn.disabled = true;
+            btn.textContent = 'Testing...';
+            const originalStatus = status.textContent;
+            status.textContent = '';
+            status.style.color = '';
+
+            try {
+                const response = await fetch('/api/wp-test-connection.php', {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        csrf_token: window.CSRF_TOKEN
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    status.textContent = '✓ ' + data.message;
+                    status.style.color = 'var(--success-color)';
+                    // Message will persist - it's stored in database and shown on page load
+                } else {
+                    status.textContent = '✗ ' + (data.error || 'Connection failed');
+                    status.style.color = 'var(--error-color)';
+                }
+            } catch (error) {
+                status.textContent = '✗ Connection test failed';
+                status.style.color = 'var(--error-color)';
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Test Connection';
+            }
+        });
+        
+        // Clear success message when WP settings change
+        const wpInputs = ['wp_base_url', 'wp_user', 'wp_app_password'];
+        wpInputs.forEach(id => {
+            const input = document.getElementById(id);
+            if (input) {
+                input.addEventListener('input', () => {
+                    const status = document.getElementById('wp-connection-status');
+                    if (status && status.textContent.includes('✓')) {
+                        status.textContent = '';
+                        status.style.color = '';
+                    }
+                });
+            }
+        });
     </script>
 </body>
 </html>

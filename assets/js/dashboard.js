@@ -18,6 +18,8 @@ let settings = {
     show_datetime: false,
     pagination_per_page: '20'
 };
+let wpConfigured = false;
+let wpStatusCache = {}; // Cache for WP status checks (bookmark_id -> {exists, timestamp})
 
 /**
  * Verify authentication state from server
@@ -198,9 +200,15 @@ async function loadSettings() {
     try {
         const data = await API.getSettings();
         settings = data.settings || settings; // Use defaults if API fails
+        
+        // Check if WordPress is configured AND connection has been tested
+        const wpSettingsExist = !!(settings.wp_base_url && settings.wp_user && settings.wp_app_password);
+        const wpConnectionTested = settings.wp_connection_tested === '1' || settings.wp_connection_tested === 1;
+        wpConfigured = wpSettingsExist && wpConnectionTested;
     } catch (error) {
         console.error('Failed to load settings:', error);
         // Use defaults
+        wpConfigured = false;
     }
 }
 
@@ -253,6 +261,11 @@ function renderBookmarks() {
                 </h3>
                 ${(window.IS_AUTHENTICATED === true) ? `
                 <div class="bookmark-actions">
+                    ${wpConfigured ? `
+                    <button class="btn-icon publish-to-wp" data-id="${bookmark.id}" title="Publish to WordPress" data-wp-status="unknown">
+                        📤
+                    </button>
+                    ` : ''}
                     <button class="btn-icon edit-bookmark" data-id="${bookmark.id}" title="Edit">
                         ✏️
                     </button>
@@ -293,6 +306,24 @@ function renderBookmarks() {
             editBookmark(id);
         });
     });
+    
+    // Attach WordPress publish button handlers
+    if (wpConfigured) {
+        container.querySelectorAll('.publish-to-wp').forEach(btn => {
+            const bookmarkId = parseInt(btn.dataset.id);
+            
+            // Check status on hover
+            btn.addEventListener('mouseenter', () => {
+                checkWpStatus(bookmarkId, btn);
+            });
+            
+            // Publish on click
+            btn.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                await publishToWordPress(bookmarkId, btn);
+            });
+        });
+    }
 }
 
 /**
@@ -741,5 +772,110 @@ function showSuccess(message) {
         notification.style.animation = 'slideOut 0.3s ease-out';
         setTimeout(() => notification.remove(), 300);
     }, 3000);
+}
+
+/**
+ * Check if bookmark exists in WordPress (on-demand, cached)
+ */
+async function checkWpStatus(bookmarkId, button) {
+    // Check cache first (valid for 5 minutes)
+    const cached = wpStatusCache[bookmarkId];
+    if (cached && (Date.now() - cached.timestamp) < 300000) {
+        updateWpButtonState(button, cached.exists);
+        return;
+    }
+    
+    // Show loading state
+    button.style.opacity = '0.5';
+    button.title = 'Checking WordPress...';
+    
+    try {
+        const data = await API.checkWpBookmarkExists(bookmarkId);
+        
+        // Update cache
+        wpStatusCache[bookmarkId] = {
+            exists: data.exists === true,
+            timestamp: Date.now()
+        };
+        
+        updateWpButtonState(button, data.exists === true);
+    } catch (error) {
+        console.error('Failed to check WP status:', error);
+        button.style.opacity = '1';
+        button.title = 'Publish to WordPress (check failed)';
+    }
+}
+
+/**
+ * Update WordPress publish button state
+ */
+function updateWpButtonState(button, exists) {
+    button.style.opacity = exists ? '0.4' : '1';
+    button.disabled = exists;
+    button.dataset.wpStatus = exists ? 'exists' : 'new';
+    button.title = exists ? 'Already published to WordPress' : 'Publish to WordPress';
+    if (exists) {
+        button.style.cursor = 'not-allowed';
+    } else {
+        button.style.cursor = 'pointer';
+    }
+}
+
+/**
+ * Publish bookmark to WordPress
+ */
+async function publishToWordPress(bookmarkId, button) {
+    // Check if already exists
+    const cached = wpStatusCache[bookmarkId];
+    if (cached && cached.exists) {
+        showError('This bookmark is already published to WordPress');
+        return;
+    }
+    
+    // Confirm action
+    if (!confirm('Publish this bookmark to WordPress?')) {
+        return;
+    }
+    
+    // Show loading state
+    const originalTitle = button.title;
+    button.disabled = true;
+    button.style.opacity = '0.5';
+    button.title = 'Publishing...';
+    
+    try {
+        const data = await API.publishToWordPress(bookmarkId);
+        
+        if (data.success) {
+            // Update cache
+            wpStatusCache[bookmarkId] = {
+                exists: true,
+                timestamp: Date.now()
+            };
+            
+            updateWpButtonState(button, true);
+            showSuccess('Bookmark published to WordPress successfully!');
+        } else if (data.already_exists) {
+            // Update cache
+            wpStatusCache[bookmarkId] = {
+                exists: true,
+                timestamp: Date.now()
+            };
+            
+            updateWpButtonState(button, true);
+            showError(data.message || 'This bookmark is already published to WordPress');
+        } else {
+            showError(data.error || 'Failed to publish to WordPress');
+            button.disabled = false;
+            button.style.opacity = '1';
+            button.title = originalTitle;
+        }
+    } catch (error) {
+        console.error('Failed to publish to WordPress:', error);
+        showError(error.message || 'Failed to publish to WordPress');
+        button.disabled = false;
+        button.style.opacity = '1';
+        button.title = originalTitle;
+    }
 }
 
