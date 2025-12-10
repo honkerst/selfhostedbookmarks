@@ -454,6 +454,29 @@ body {
     color: var(--text-light);
 }
 
+.app-footer {
+    text-align: center;
+    margin-top: 2rem;
+    padding: 1rem 0;
+}
+
+.app-footer p {
+    font-size: 0.5rem;
+    color: var(--text-light);
+    margin: 0;
+}
+
+.app-footer a {
+    color: var(--text-light);
+    text-decoration: none;
+    transition: color 0.2s ease;
+}
+
+.app-footer a:hover {
+    color: var(--primary-color);
+    text-decoration: underline;
+}
+
 /* Buttons */
 .btn {
     padding: 0.75rem 1.5rem;

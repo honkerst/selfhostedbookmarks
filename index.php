@@ -73,6 +73,9 @@ header('Expires: 0');
                     <div id="pagination" class="pagination">
                         <!-- Pagination will be loaded here -->
                     </div>
+                    <div class="app-footer">
+                        <p>powered by <a href="https://github.com/honkerst/selfhostedbookmarks" target="_blank" rel="noopener noreferrer">selfhostedbookmarks</a></p>
+                    </div>
                 </div>
                 
                 <aside class="sidebar">

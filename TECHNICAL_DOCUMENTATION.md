@@ -36,7 +36,10 @@ selfhostedbookmarks/
 │   ├── bookmarks.php        # Bookmarks CRUD API
 │   ├── bookmarklet.php      # Bookmarklet-specific API
 │   ├── tags.php             # Tags API (autocomplete, listing)
-│   └── settings.php         # User settings API
+│   ├── settings.php         # User settings API
+│   ├── import.php           # Import API
+│   ├── wp-test-connection.php  # WordPress connection test
+│   └── wp-publish.php       # WordPress publish API
 ├── assets/
 │   ├── css/
 │   │   └── style.css        # Main stylesheet
@@ -46,16 +49,26 @@ selfhostedbookmarks/
 │       └── bookmarklet.js   # Bookmarklet popup functionality
 ├── includes/
 │   ├── config.php           # Database connection, config
+│   ├── config.php.example  # Example config file
 │   ├── auth.php             # Authentication functions
 │   └── functions.php        # Utility functions
+├── scripts/
+│   └── shb_thc_to_wp.php   # WordPress sync script
 ├── sql/
-│   └── schema.sql           # Database schema
+│   ├── schema.sql           # Database schema
+│   └── migrations/
+│       └── 001_add_imports_table.sql
 ├── data/                    # SQLite database file location (created at runtime)
 ├── index.php                # Main dashboard page
 ├── login.php                # Login page
 ├── settings.php             # Settings page
+├── tags.php                 # Tags page
+├── import.php               # Import page
 ├── bookmarklet-popup.php    # Bookmarklet popup window
-└── bookmarklet.js           # Bookmarklet code (for browser bookmark bar)
+├── bookmarklet.js           # Bookmarklet code (for browser bookmark bar)
+├── README.md
+├── TECHNICAL_DOCUMENTATION.md
+└── CLOUDFLARE.md
 ```
 
 ### Request Flow
@@ -128,9 +141,23 @@ CREATE TABLE settings (
 ```
 
 **Available Settings:**
+
+**Display Settings:**
 - `tags_alphabetical` - Sort tags alphabetically (default: false)
 - `show_url` - Display URL under bookmark title (default: true)
 - `show_datetime` - Show exact date/time vs date only (default: false)
+- `pagination_per_page` - Number of bookmarks per page (default: '20', can be 'unlimited')
+- `tag_threshold` - Minimum tag count to show in sidebar (default: '2')
+
+**WordPress Integration Settings:**
+- `shb_base_url` - SelfHostedBookmarks base URL
+- `wp_base_url` - WordPress base URL (where `/wp-json/` lives)
+- `wp_user` - WordPress username
+- `wp_app_password` - WordPress application password (stored in plaintext)
+- `wp_watch_tag` - SHB tag that triggers auto-posting
+- `wp_post_tags` - WordPress tags to add to posts (comma-separated)
+- `wp_post_categories` - WordPress categories to add to posts (comma-separated)
+- `wp_connection_tested` - Flag indicating connection has been tested ('0' or '1')
 
 #### `login_attempts`
 Stores login attempt history for rate limiting.
@@ -366,24 +393,101 @@ $pdo->exec('PRAGMA foreign_keys = ON');  // Enable foreign key constraints
 **Methods:**
 
 #### `GET`
-- **Returns:** `{settings: {tags_alphabetical: bool, show_url: bool, show_datetime: bool}}`
+- **Returns:** `{settings: {...}}` - All settings (display, pagination, WordPress, etc.)
 - **Authentication:** Public (settings apply to all users)
 
 **Default Values:**
 - `tags_alphabetical`: false
 - `show_url`: true
 - `show_datetime`: false
+- `pagination_per_page`: '20'
+- `tag_threshold`: '2'
+- WordPress settings: empty strings (not configured)
 
 #### `PUT`
-- **Body:** `{settings: {tags_alphabetical: bool, show_url: bool, show_datetime: bool}, csrf_token: '...'}`
+- **Body:** `{settings: {...}, csrf_token: '...'}`
 - **Returns:** Updated settings
 - **Authentication:** Required
 - **CSRF Protection:** Required (token in request body)
 
 **Implementation:**
-- Stores as '0' or '1' in database
-- Converts to boolean in API response
+- Boolean settings stored as '0' or '1' in database
+- String settings (pagination, WordPress config) stored as strings
+- Converts to appropriate types in API response
 - Uses `INSERT ... ON CONFLICT DO UPDATE` for upsert
+
+### `/api/import.php`
+
+**Purpose:** Import bookmarks from external sources
+
+**Methods:**
+
+#### `GET`
+- **Returns:** `{imports: [...]}` - Import history
+- **Authentication:** Required
+
+#### `POST`
+- **Body:** `{content: string, additional_tags: [...], filename: string, format: 'auto'|'html'|'json'}`
+- **Returns:** `{success: true, imported: number, import_id: number}`
+- **Authentication:** Required
+- **CSRF Protection:** Required
+
+**Supported Formats:**
+- Netscape HTML (Chrome, Firefox, Safari exports)
+- Pinboard JSON format
+
+#### `DELETE`
+- **Body:** `{import_id: number}`
+- **Returns:** Success message
+- **Authentication:** Required
+- **CSRF Protection:** Required
+- **Purpose:** Undo an import (removes all bookmarks from that import)
+
+### `/api/wp-test-connection.php`
+
+**Purpose:** Test WordPress connection credentials
+
+**Methods:**
+
+#### `POST`
+- **Body:** `{csrf_token: '...'}`
+- **Returns:** `{success: true/false, message: '...'}` or `{error: '...'}`
+- **Authentication:** Required
+- **CSRF Protection:** Required
+
+**Implementation:**
+- Reads WordPress settings from database
+- Tests connection via WordPress REST API (`/wp-json/wp/v2/users/me`)
+- Sets `wp_connection_tested` to '1' on success
+- Returns user information on success
+
+### `/api/wp-publish.php`
+
+**Purpose:** Check if bookmark exists in WordPress and publish bookmarks
+
+**Methods:**
+
+#### `GET ?bookmark_id=X`
+- **Returns:** `{exists: bool, configured: bool}`
+- **Authentication:** Required
+- **Purpose:** Check if bookmark URL already exists in WordPress (on-demand check)
+
+#### `POST`
+- **Body:** `{bookmark_id: number, csrf_token: '...'}`
+- **Returns:** `{success: true/false, message: '...', post_id: number}` or `{already_exists: true, message: '...'}`
+- **Authentication:** Required
+- **CSRF Protection:** Required
+
+**Implementation:**
+- Fetches bookmark from database
+- Checks if URL exists in WordPress (searches post content)
+- If exists, returns `already_exists: true`
+- If not, creates WordPress post with:
+  - Title from bookmark
+  - Content: description + link
+  - Date: bookmark's original `created_at` date
+  - Tags: from `wp_post_tags` setting (creates if missing)
+  - Categories: from `wp_post_categories` setting (creates if missing)
 
 ## Frontend Components
 
@@ -396,10 +500,12 @@ $pdo->exec('PRAGMA foreign_keys = ON');  // Enable foreign key constraints
 - Authenticated view: Shows all bookmarks (public + private)
 - Search functionality
 - Tag filtering (sidebar)
-- Pagination
+- Configurable pagination (1-1000 or unlimited)
+- Tag threshold filtering (only shows tags with minimum count)
 - Conditional UI based on authentication:
   - Login/Logout button
   - Edit/Delete icons (only when authenticated)
+  - Publish to WordPress button (📤) - only when WordPress is configured and tested
   - Bookmarklet sidebar (only when authenticated)
 
 **Key JavaScript File:** `assets/js/dashboard.js`
@@ -453,15 +559,28 @@ $pdo->exec('PRAGMA foreign_keys = ON');  // Enable foreign key constraints
 
 ### Settings Page (`settings.php`)
 
-**Purpose:** Configure display preferences
+**Purpose:** Configure display preferences, import bookmarks, and WordPress integration
 
 **Features:**
-- Three toggle options:
-  - Tags alphabetical order
-  - Show URL under bookmark
-  - Show exact date/time
-- Saves via POST to same page (updates database)
-- Redirects to dashboard after save
+
+**Display Options:**
+- Tags alphabetical order toggle
+- Show URL under bookmark toggle
+- Show exact date/time toggle
+- Bookmarks per page (1-1000 or unlimited)
+- Tag threshold (minimum count to show in sidebar)
+
+**Import Bookmarks:**
+- Link to import page for importing from external sources
+
+**WordPress Auto-Post:**
+- SHB Base URL configuration
+- WordPress Base URL, Username, Application Password
+- Test Connection button (verifies credentials and sets `wp_connection_tested` flag)
+- SHB Tag to Watch (triggers auto-posting)
+- WordPress Tags and Categories configuration
+- Scheduling examples (cron and control panel commands)
+- Success message persists until settings change
 
 **Settings Application:**
 - Dashboard loads settings on page load
@@ -469,6 +588,11 @@ $pdo->exec('PRAGMA foreign_keys = ON');  // Enable foreign key constraints
   - Tags sorted alphabetically if enabled
   - URL shown/hidden based on setting
   - Date format changes based on setting
+  - Pagination respects `pagination_per_page` setting
+  - Tag sidebar filters by `tag_threshold`
+- WordPress publish buttons only appear if:
+  - WordPress settings are configured (base URL, user, password)
+  - Connection has been tested (`wp_connection_tested === '1'`)
 
 ### API Helper (`assets/js/api.js`)
 
@@ -733,6 +857,56 @@ $pdo->exec('PRAGMA foreign_keys = ON');  // Enable foreign key constraints
 - Other APIs use same-origin policy
 - CORS headers set appropriately in `api/bookmarklet.php`
 
+## WordPress Integration
+
+### Automated Publishing Script
+
+**File:** `scripts/shb_thc_to_wp.php`
+
+**Purpose:** Automatically sync bookmarks with a specific tag to WordPress
+
+**How it works:**
+1. Reads WordPress settings from database (or environment variable overrides)
+2. Fetches all bookmarks with the watch tag (newest first)
+3. For each bookmark:
+   - Checks if URL already exists in WordPress
+   - If exists: Skips and updates state file
+   - If not: Posts to WordPress with original creation date
+4. Processes multiple bookmarks per run (catches up on backlog)
+5. Stops when it reaches a bookmark already processed
+
+**Features:**
+- Duplicate prevention: Checks WordPress for existing URLs
+- Date preservation: Uses bookmark's original `created_at` date
+- Batch processing: Handles multiple bookmarks per run
+- State tracking: Stores last processed bookmark ID
+- Tag/Category creation: Automatically creates WordPress tags/categories if missing
+
+**Configuration:**
+- Settings stored in database (configured via Settings page)
+- Environment variables can override database settings
+- Defaults provided for common use cases
+
+### Manual Publishing
+
+**API Endpoint:** `/api/wp-publish.php`
+
+**Purpose:** Allow users to manually publish individual bookmarks
+
+**Features:**
+- On-demand status checking (checks WordPress when button is hovered)
+- Cached results (5-minute cache to avoid repeated API calls)
+- Visual feedback (button greyed out if already published)
+- Confirmation dialog before publishing
+- Same functionality as automated script (tags, categories, date preservation)
+
+**User Experience:**
+- Publish button (📤) appears next to Edit/Delete buttons
+- Only visible if WordPress is configured and connection tested
+- Hover to check status (cached for 5 minutes)
+- Click to publish (with confirmation)
+- Button disabled/greyed if already published
+
 ## Important Implementation Details
 
 ### Cache Control Headers
@@ -761,9 +935,12 @@ header("Expires: 0");
 
 ### Pagination
 
-- 20 bookmarks per page
-- Offset calculated: `($page - 1) * 20`
-- Total pages: `ceil(total / 20)`
+- Configurable per page (1-1000 or unlimited)
+- Default: 20 bookmarks per page
+- Setting: `pagination_per_page` in database
+- When set to 'unlimited', shows all bookmarks on one page
+- Offset calculated: `($page - 1) * $perPage`
+- Total pages: `ceil(total / $perPage)` (or 1 if unlimited)
 - Previous/Next buttons disabled at boundaries
 
 ### Error Handling
