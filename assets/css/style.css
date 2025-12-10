@@ -113,6 +113,11 @@ body {
     gap: 2rem;
 }
 
+.bookmarks-section {
+    width: 100%;
+    min-width: 0; /* Allow grid item to shrink */
+}
+
 /* Bookmarks Section */
 .bookmarks-header {
     margin-bottom: 1.5rem;
@@ -831,15 +836,15 @@ body {
 
 /* Tags Management Page */
 .tags-management-list {
-    display: flex;
-    flex-direction: column;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
     gap: 0.75rem;
 }
 
 .tag-management-item {
     display: flex;
-    justify-content: space-between;
-    align-items: center;
+    flex-direction: column;
+    gap: 0.75rem;
     padding: 1rem;
     background: var(--bg-color);
     border: 1px solid var(--border-color);
@@ -853,8 +858,8 @@ body {
 
 .tag-management-info {
     display: flex;
-    align-items: center;
-    gap: 1rem;
+    flex-direction: column;
+    gap: 0.5rem;
     flex: 1;
 }
 
@@ -862,6 +867,13 @@ body {
     font-weight: 500;
     color: var(--primary-color);
     font-size: 1rem;
+    text-decoration: none;
+    transition: color 0.2s;
+}
+
+.tag-management-name:hover {
+    color: var(--primary-hover);
+    text-decoration: underline;
 }
 
 .tag-management-count {

@@ -94,7 +94,7 @@ requireAuth();
                     html += `
                         <div class="tag-management-item">
                             <div class="tag-management-info">
-                                <span class="tag-management-name">#${escapeHtml(tag.name)}</span>
+                                <a href="/?tag=${encodeURIComponent(tag.name)}" class="tag-management-name">#${escapeHtml(tag.name)}</a>
                                 <span class="tag-management-count">${tag.count} bookmark${tag.count !== 1 ? 's' : ''}</span>
                             </div>
                             <button class="btn btn-small btn-danger delete-tag-btn" data-tag-name="${escapeHtml(tag.name)}">

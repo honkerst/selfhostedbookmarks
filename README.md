@@ -65,11 +65,7 @@ A simple bookmarking service in memory of del.icio.us, built with vanilla PHP an
 
 ## Setup Bookmarklet
 
-1. Open `bookmarklet.js` and replace `YOUR_DOMAIN_HERE` with your actual domain
-2. Copy the entire `javascript:...` code
-3. Create a new bookmark in your browser
-4. Set the bookmark URL to the copied code
-5. Name it something like "Add to SHB"
+1. Visit the Settings page and drag the bookmarklet to your browser toolbar.
 
 ## Usage
 
