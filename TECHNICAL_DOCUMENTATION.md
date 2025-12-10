@@ -295,9 +295,11 @@ $pdo->exec('PRAGMA foreign_keys = ON');  // Enable foreign key constraints
 #### `GET`
 - **Query Params:**
   - `page` - Page number (default: 1)
-  - `tag` - Filter by tag name
-  - `search` - Search in title, description, URL
-  - `private` - Filter by privacy (0/1, only for authenticated users)
+  - `tag` - Filter by tag name (e.g., `?tag=jquery`)
+  - `search` - Search in title, description, URL (e.g., `?search=javascript`)
+  - `private` - Filter by privacy (0/1, only for authenticated users, e.g., `?private=1`)
+  - **URL state management**: Filter state is reflected in URL parameters, making filters shareable and bookmarkable
+  - **Browser navigation**: Back/forward buttons work with filter state (uses `popstate` event)
 - **Returns:** `{bookmarks: [...], pagination: {...}}`
 - **Authentication:** Public (filters private bookmarks for non-authenticated users)
 
@@ -746,6 +748,7 @@ $pdo->exec('PRAGMA foreign_keys = ON');  // Enable foreign key constraints
    - Selected text: `document.getSelection().toString()`
 3. Opens popup: `bookmarklet-popup.php?url=...&title=...&description=...`
 4. Popup loads:
+   - URL parameters are URL-decoded (handles `%20` spaces and other encoded characters)
    - Checks if bookmark exists: `GET /api/bookmarklet.php?url=...`
    - If exists: Preloads title, description, tags
    - If not: Keeps URL params, tries clipboard
@@ -881,6 +884,7 @@ $pdo->exec('PRAGMA foreign_keys = ON');  // Enable foreign key constraints
 - Batch processing: Handles multiple bookmarks per run
 - State tracking: Stores last processed bookmark ID
 - Tag/Category creation: Automatically creates WordPress tags/categories if missing
+- **Private bookmark exclusion**: Only processes public bookmarks (uses unauthenticated API that filters private bookmarks)
 
 **Configuration:**
 - Settings stored in database (configured via Settings page)
@@ -899,6 +903,7 @@ $pdo->exec('PRAGMA foreign_keys = ON');  // Enable foreign key constraints
 - Visual feedback (button greyed out if already published)
 - Confirmation dialog before publishing
 - Same functionality as automated script (tags, categories, date preservation)
+- **Works on private bookmarks**: Unlike automatic sync, manual publish can publish private bookmarks (uses authenticated API with direct database access)
 
 **User Experience:**
 - Publish button (📤) appears next to Edit/Delete buttons

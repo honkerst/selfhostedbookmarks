@@ -90,6 +90,8 @@ A simple bookmarking service in memory of del.icio.us, built with vanilla PHP an
 - **View Bookmarks**: All bookmarks are displayed on the main page
 - **Search**: Use the search box to find bookmarks by title, URL, or description
 - **Filter by Tag**: Click any tag in the sidebar to filter bookmarks
+- **Filter by Private**: When logged in, a "Private" tag appears at the top of the sidebar to view only private bookmarks
+- **URL Parameters**: Filter state is reflected in the URL (`?tag=jquery`, `?private=1`, `?search=...`) - shareable and bookmarkable
 - **Pagination**: Navigate through pages of bookmarks (configurable in Settings)
 - **Publish to WordPress**: If WordPress is configured, each bookmark has a 📤 button to manually publish to WordPress
 
@@ -267,6 +269,7 @@ Once WordPress is configured and tested:
 - Hover over the button to check if the bookmark already exists in WordPress
 - Click to publish the bookmark immediately
 - The button will be greyed out if the bookmark is already published
+- **Private bookmarks CAN be manually published** (manual publish works on all bookmarks, including private ones)
 
 ### Automated Publishing
 
@@ -277,6 +280,7 @@ The sync script (`scripts/shb_thc_to_wp.php`) automatically posts new bookmarks 
 - Skips bookmarks that already exist in WordPress (checks by URL)
 - Preserves original bookmark creation date in WordPress posts
 - Uses settings from the database (no environment variables needed)
+- **Private bookmarks are NOT auto-posted** (automatic sync only processes public bookmarks)
 
 **Scheduling Options:**
 

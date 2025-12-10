@@ -122,8 +122,8 @@ if ($method === 'GET') {
     try {
         
         $url = $data['url'] ?? '';
-        $title = $data['title'] ?? '';
-        $description = $data['description'] ?? '';
+        $title = isset($data['title']) ? urldecode($data['title']) : '';
+        $description = isset($data['description']) ? urldecode($data['description']) : '';
         $tags = $data['tags'] ?? [];
         $isPrivate = isset($data['is_private']) ? (int)$data['is_private'] : 0;
         

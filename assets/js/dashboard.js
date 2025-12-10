@@ -362,7 +362,7 @@ function renderBookmarks() {
     if (!container) return;
     
     if (bookmarks.length === 0) {
-        container.innerHTML = '<div class="empty-state">No bookmarks found. Add one using the bookmarklet!</div>';
+        container.innerHTML = '<div class="empty-state">No bookmarks found.</div>';
         return;
     }
     
@@ -458,8 +458,8 @@ function renderTags() {
     const container = document.getElementById('tags-sidebar');
     if (!container) return;
     
-    // Determine if we should show clear button
-    const hasActiveFilter = currentTag || currentPrivate || currentSearch;
+    // Determine if we should show clear button (only for tag/private filters, not search)
+    const hasActiveFilter = currentTag || currentPrivate;
     
     // Build private tag HTML (only show when authenticated and there are private bookmarks)
     let privateTagHtml = '';
@@ -510,7 +510,7 @@ function renderTags() {
     const clearBtn = document.getElementById('clear-tag-filter');
     if (clearBtn) {
         clearBtn.addEventListener('click', () => {
-            clearFilters();
+            clearTagFilters();
         });
     }
 }
@@ -558,7 +558,21 @@ function filterByPrivate() {
 }
 
 /**
- * Clear all filters
+ * Clear only tag/private filters (not search)
+ */
+function clearTagFilters() {
+    currentTag = '';
+    currentPrivate = false;
+    currentPage = 1;
+    updateSearchPlaceholder();
+    loadBookmarks();
+    loadTags(); // Reload to update active state
+    // Scroll to top of page
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+/**
+ * Clear all filters (including search)
  */
 function clearFilters() {
     currentTag = '';

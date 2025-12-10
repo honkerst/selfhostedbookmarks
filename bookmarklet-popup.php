@@ -6,8 +6,8 @@ requireAuth();
 
 // Get pre-filled data from URL parameters
 $url = $_GET['url'] ?? '';
-$title = $_GET['title'] ?? '';
-$description = $_GET['description'] ?? '';
+$title = isset($_GET['title']) ? urldecode($_GET['title']) : '';
+$description = isset($_GET['description']) ? urldecode($_GET['description']) : '';
 ?>
 <!DOCTYPE html>
 <html lang="en">
