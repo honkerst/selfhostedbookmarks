@@ -131,6 +131,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Read URL parameters and set initial filter state
     readUrlParams();
     
+    // Update search placeholder based on initial filter state
+    updateSearchPlaceholder();
+    
     // Now load data - auth state is verified, settings loaded
     loadTags();
     loadBookmarks();
@@ -175,6 +178,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Handle browser back/forward buttons
     window.addEventListener('popstate', () => {
         readUrlParams();
+        updateSearchPlaceholder();
         loadTags();
         loadBookmarks();
     });
@@ -512,12 +516,27 @@ function renderTags() {
 }
 
 /**
+ * Update search input placeholder based on filter state
+ */
+function updateSearchPlaceholder() {
+    const searchInput = document.getElementById('search-input');
+    if (!searchInput) return;
+    
+    if (currentTag) {
+        searchInput.placeholder = 'Search filtered bookmarks...';
+    } else {
+        searchInput.placeholder = 'Search bookmarks...';
+    }
+}
+
+/**
  * Filter by tag
  */
 function filterByTag(tag) {
     currentTag = tag || '';
     currentPrivate = false; // Clear private filter when filtering by tag
     currentPage = 1;
+    updateSearchPlaceholder();
     loadBookmarks();
     loadTags(); // Reload to update active state
     // Scroll to top of page
@@ -531,6 +550,7 @@ function filterByPrivate() {
     currentPrivate = true;
     currentTag = ''; // Clear tag filter when filtering by private
     currentPage = 1;
+    updateSearchPlaceholder();
     loadBookmarks();
     loadTags(); // Reload to update active state
     // Scroll to top of page
@@ -549,6 +569,7 @@ function clearFilters() {
     if (searchInput) {
         searchInput.value = '';
     }
+    updateSearchPlaceholder();
     loadBookmarks();
     loadTags(); // Reload to update active state
     // Scroll to top of page
