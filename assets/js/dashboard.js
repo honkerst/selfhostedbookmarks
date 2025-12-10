@@ -366,15 +366,274 @@ async function deleteBookmark(id) {
 }
 
 /**
- * Edit bookmark (placeholder - can be enhanced with modal)
+ * Edit bookmark inline
  */
-function editBookmark(id) {
+let editingBookmarkId = null;
+let allTagsForAutocomplete = [];
+
+async function editBookmark(id) {
     const bookmark = bookmarks.find(b => b.id === id);
     if (!bookmark) return;
     
-    // For now, just show an alert - can be enhanced with a modal
-    alert('Edit functionality coming soon!\n\nBookmark: ' + bookmark.title);
-    // TODO: Implement edit modal
+    // If already editing this bookmark, do nothing
+    if (editingBookmarkId === id) return;
+    
+    // If editing another bookmark, cancel that first
+    if (editingBookmarkId !== null) {
+        cancelEdit(editingBookmarkId);
+    }
+    
+    editingBookmarkId = id;
+    
+    // Load tags for autocomplete if not already loaded
+    if (allTagsForAutocomplete.length === 0) {
+        try {
+            const data = await API.getTags();
+            allTagsForAutocomplete = (data.tags || []).map(t => t.name);
+        } catch (error) {
+            console.error('Failed to load tags:', error);
+        }
+    }
+    
+    const card = document.querySelector(`.bookmark-card[data-id="${id}"]`);
+    if (!card) return;
+    
+    // Store original HTML for cancel
+    card.dataset.originalHtml = card.innerHTML;
+    
+    // Create edit form
+    const tagsString = bookmark.tags && bookmark.tags.length > 0 ? bookmark.tags.join(', ') : '';
+    
+    card.innerHTML = `
+        <form class="bookmark-edit-form" data-id="${id}">
+            <div class="form-group">
+                <label for="edit-url-${id}">URL *</label>
+                <input type="url" id="edit-url-${id}" name="url" required value="${escapeHtml(bookmark.url)}">
+            </div>
+            
+            <div class="form-group">
+                <label for="edit-title-${id}">Title</label>
+                <input type="text" id="edit-title-${id}" name="title" value="${escapeHtml(bookmark.title || '')}">
+            </div>
+            
+            <div class="form-group">
+                <label for="edit-description-${id}">Description</label>
+                <textarea id="edit-description-${id}" name="description" rows="3">${escapeHtml(bookmark.description || '')}</textarea>
+            </div>
+            
+            <div class="form-group">
+                <label for="edit-tags-${id}">Tags (comma-separated)</label>
+                <input type="text" 
+                       id="edit-tags-${id}" 
+                       name="tags" 
+                       value="${escapeHtml(tagsString)}"
+                       placeholder="tag1, tag2, tag3"
+                       autocomplete="off">
+                <div class="tag-autocomplete" id="edit-autocomplete-${id}"></div>
+            </div>
+            
+            <div class="form-group">
+                <label>
+                    <input type="checkbox" id="edit-private-${id}" name="is_private" value="1" ${bookmark.is_private ? 'checked' : ''}>
+                    Private
+                </label>
+            </div>
+            
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">Save</button>
+                <button type="button" class="btn cancel-edit-btn">Cancel</button>
+            </div>
+        </form>
+    `;
+    
+    // Setup tag autocomplete
+    setupTagAutocomplete(id);
+    
+    // Attach form handlers
+    const form = card.querySelector('.bookmark-edit-form');
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        await saveBookmarkEdit(id);
+    });
+    
+    card.querySelector('.cancel-edit-btn').addEventListener('click', () => {
+        cancelEdit(id);
+    });
+    
+    // Focus on URL field
+    document.getElementById(`edit-url-${id}`).focus();
+}
+
+/**
+ * Setup tag autocomplete for edit form
+ */
+function setupTagAutocomplete(bookmarkId) {
+    const input = document.getElementById(`edit-tags-${bookmarkId}`);
+    const container = document.getElementById(`edit-autocomplete-${bookmarkId}`);
+    if (!input || !container) return;
+    
+    let autocompleteTimeout;
+    
+    input.addEventListener('input', () => {
+        clearTimeout(autocompleteTimeout);
+        autocompleteTimeout = setTimeout(() => {
+            showEditAutocomplete(input, container, bookmarkId);
+        }, 300);
+    });
+    
+    input.addEventListener('blur', () => {
+        // Delay hiding to allow click on autocomplete item
+        setTimeout(() => {
+            container.style.display = 'none';
+        }, 200);
+    });
+    
+    // Hide autocomplete when clicking outside
+    document.addEventListener('click', (e) => {
+        if (!container.contains(e.target) && e.target !== input) {
+            container.style.display = 'none';
+        }
+    });
+}
+
+/**
+ * Show autocomplete for edit form
+ */
+function showEditAutocomplete(input, container, bookmarkId) {
+    const value = input.value;
+    const cursorPos = input.selectionStart || value.length;
+    const beforeCursor = value.substring(0, cursorPos);
+    const lastComma = beforeCursor.lastIndexOf(',');
+    const currentTag = beforeCursor.substring(lastComma + 1).trim();
+    
+    if (currentTag.length === 0) {
+        container.style.display = 'none';
+        return;
+    }
+    
+    // Filter tags matching current input
+    const matches = allTagsForAutocomplete.filter(tag => 
+        tag.toLowerCase().startsWith(currentTag.toLowerCase()) && 
+        tag.toLowerCase() !== currentTag.toLowerCase()
+    ).slice(0, 5);
+    
+    if (matches.length === 0) {
+        container.style.display = 'none';
+        return;
+    }
+    
+    container.innerHTML = matches.map(tag => `
+        <div class="autocomplete-item" data-tag="${escapeHtml(tag)}">
+            ${escapeHtml(tag)}
+        </div>
+    `).join('');
+    
+    container.style.display = 'block';
+    
+    // Attach click handlers
+    container.querySelectorAll('.autocomplete-item').forEach(item => {
+        item.addEventListener('click', () => {
+            selectEditAutocompleteTag(input, item.dataset.tag, currentTag);
+            container.style.display = 'none';
+        });
+    });
+}
+
+/**
+ * Select autocomplete tag in edit form
+ */
+function selectEditAutocompleteTag(input, tag, currentTag) {
+    const value = input.value;
+    const cursorPos = input.selectionStart || value.length;
+    const beforeCursor = value.substring(0, cursorPos);
+    const afterCursor = value.substring(cursorPos);
+    const lastComma = beforeCursor.lastIndexOf(',');
+    
+    let newValue;
+    if (lastComma === -1) {
+        // First tag
+        newValue = tag + (afterCursor.trim() ? ', ' + afterCursor : ', ');
+    } else {
+        const beforeTag = value.substring(0, lastComma + 1);
+        newValue = beforeTag + ' ' + tag + (afterCursor.trim() ? ', ' + afterCursor : ', ');
+    }
+    
+    input.value = newValue;
+    input.focus();
+    input.setSelectionRange(newValue.length, newValue.length);
+}
+
+/**
+ * Save bookmark edit
+ */
+async function saveBookmarkEdit(id) {
+    const form = document.querySelector(`.bookmark-edit-form[data-id="${id}"]`);
+    if (!form) return;
+    
+    const url = document.getElementById(`edit-url-${id}`).value.trim();
+    const title = document.getElementById(`edit-title-${id}`).value.trim();
+    const description = document.getElementById(`edit-description-${id}`).value.trim();
+    const tagsInput = document.getElementById(`edit-tags-${id}`).value.trim();
+    const isPrivate = document.getElementById(`edit-private-${id}`).checked;
+    
+    if (!url) {
+        alert('URL is required');
+        return;
+    }
+    
+    // Parse tags
+    const tags = tagsInput ? tagsInput.split(',').map(t => t.trim()).filter(t => t) : [];
+    
+    try {
+        const result = await API.updateBookmark({
+            id: id,
+            url: url,
+            title: title,
+            description: description,
+            tags: tags,
+            is_private: isPrivate ? 1 : 0
+        });
+        
+        // Reload bookmarks to get updated data
+        await loadBookmarks();
+        editingBookmarkId = null;
+    } catch (error) {
+        alert('Failed to update bookmark: ' + (error.message || 'Unknown error'));
+    }
+}
+
+/**
+ * Cancel edit
+ */
+function cancelEdit(id) {
+    const card = document.querySelector(`.bookmark-card[data-id="${id}"]`);
+    if (!card) return;
+    
+    if (card.dataset.originalHtml) {
+        card.innerHTML = card.dataset.originalHtml;
+        delete card.dataset.originalHtml;
+        
+        // Re-attach event listeners after restoring HTML
+        const editBtn = card.querySelector('.edit-bookmark');
+        if (editBtn) {
+            editBtn.addEventListener('click', (e) => {
+                const bookmarkId = parseInt(e.target.closest('.edit-bookmark').dataset.id);
+                editBookmark(bookmarkId);
+            });
+        }
+        
+        const deleteBtn = card.querySelector('.delete-bookmark');
+        if (deleteBtn) {
+            deleteBtn.addEventListener('click', (e) => {
+                const bookmarkId = parseInt(e.target.closest('.delete-bookmark').dataset.id);
+                deleteBookmark(bookmarkId);
+            });
+        }
+    }
+    
+    if (editingBookmarkId === id) {
+        editingBookmarkId = null;
+    }
 }
 
 /**

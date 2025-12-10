@@ -827,6 +827,57 @@ body {
     border-color: #b91c1c;
 }
 
+/* Inline Bookmark Edit Form */
+.bookmark-edit-form {
+    padding: 1rem;
+}
+
+.bookmark-edit-form .form-group {
+    margin-bottom: 1rem;
+}
+
+.bookmark-edit-form .form-group label {
+    font-size: 0.875rem;
+    margin-bottom: 0.25rem;
+}
+
+.bookmark-edit-form .form-group input[type="text"],
+.bookmark-edit-form .form-group input[type="url"],
+.bookmark-edit-form .form-group textarea {
+    padding: 0.5rem;
+    font-size: 0.875rem;
+}
+
+.bookmark-edit-form .form-group textarea {
+    min-height: 60px;
+}
+
+.bookmark-edit-form .form-actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 1rem;
+}
+
+.bookmark-edit-form .form-group {
+    position: relative;
+}
+
+.bookmark-edit-form .tag-autocomplete {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: var(--bg-color);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-lg);
+    max-height: 200px;
+    overflow-y: auto;
+    z-index: 1000;
+    margin-top: 0.25rem;
+    display: none;
+}
+
 /* Import History */
 .import-history-section {
     margin-top: 3rem;

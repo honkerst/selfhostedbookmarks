@@ -35,14 +35,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <div class="login-container">
         <div class="login-box">
             <h1><?php echo h(SITE_NAME); ?></h1>
-            <form method="POST" action="/login.php">
+            <form method="POST" action="/login.php" id="login-form" autocomplete="on">
                 <?php if ($error): ?>
                     <div class="error-message"><?php echo h($error); ?></div>
                 <?php endif; ?>
                 
                 <div class="form-group">
+                    <label for="username">Account (optional)</label>
+                    <input
+                        type="text"
+                        id="username"
+                        name="username"
+                        autocomplete="username"
+                        placeholder="Leave blank if not used">
+                </div>
+
+                <div class="form-group">
                     <label for="password">Password</label>
-                    <input type="password" id="password" name="password" required autofocus>
+                    <input
+                        type="password"
+                        id="password"
+                        name="password"
+                        autocomplete="current-password"
+                        required
+                        autofocus>
                 </div>
                 
                 <button type="submit" class="btn btn-primary">Login</button>
