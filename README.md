@@ -107,7 +107,7 @@ A simple bookmarking service in memory of del.icio.us, built with vanilla PHP an
 1. Go to Settings → Import Bookmarks
 2. Upload a Netscape-style HTML file (exported from Chrome, Firefox, Safari, etc.) or a Pinboard JSON file
 3. Optionally add additional tags to all imported bookmarks
-4. Review and confirm the import
+4. Review and confirm the import. Undo is available.
 
 #### Via API (Manual)
 
