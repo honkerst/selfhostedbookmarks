@@ -285,7 +285,7 @@ The sync script (`scripts/shb_thc_to_wp.php`) automatically posts new bookmarks 
    */2 * * * * /usr/bin/php /path/to/scripts/shb_thc_to_wp.php >>$HOME/shb_sync.log 2>&1
    ```
 
-2. **Control Panel Scheduled Tasks** (Plesk, cPanel, etc.):
+2. **Control Panel Scheduled Tasks** (Plesk, cPanel, Enhance, etc.):
    - Use the terminal command shown in Settings
    - Schedule it to run every 2-5 minutes
 
@@ -295,7 +295,7 @@ The script reads all settings from the database, so you don't need to set enviro
 
 Free to use and modify for personal use.
 
-## Demo
+## Live example
 
 See it in action: https://bookmarks.thoughton.co.uk
 

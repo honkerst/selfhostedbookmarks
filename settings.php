@@ -353,7 +353,7 @@ try {
                                 Create this in WordPress under your user profile → Application Passwords.
                             </p>
                             <p class="setting-description" style="margin-top: 0.5rem; color: var(--text-light); font-size: 0.875rem;">
-                                <strong>Security Note:</strong> This password is stored in plaintext in the database (not encrypted) because WordPress REST API authentication requires the actual password value. The SHB settings page is protected by authentication—only logged-in users can access it. To keep your credentials secure: ensure your SHB installation requires a strong password, use HTTPS, and don't share your login credentials. If your database is compromised, regenerate this application password in WordPress.
+                                <strong>Security Note:</strong> This password is stored in plaintext in the database (not encrypted) because WordPress REST API authentication requires the actual password value. The SHB settings page is protected by authentication - only logged-in users can access it. To keep your credentials secure: ensure your SHB installation requires a strong password, use HTTPS, and don't share your login credentials. If your database is compromised, regenerate this application password in WordPress.
                             </p>
                             <div class="form-group" style="margin-top: 1rem;">
                                 <button type="button" id="test-wp-connection" class="btn btn-small">Test Connection</button>
