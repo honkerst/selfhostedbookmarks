@@ -5,27 +5,17 @@ declare(strict_types=1);
 /**
  * Sync newest SHB bookmark with a given tag to WordPress via REST API.
  *
- * Defaults are set for bookmarks.thoughton.co.uk -> thoughton.co.uk/_wp.
- * Override via environment variables:
- *   SHB_BASE_URL         e.g. https://bookmarks.thoughton.co.uk
- *   SHB_TAG              e.g. thc
- *   WP_BASE_URL          e.g. https://thoughton.co.uk/_wp
- *   WP_USER              e.g. selfhostedbookmarks
- *   WP_APP_PASSWORD      WordPress application password (required)
- *   SHB_WP_STATE_FILE    Path to last-id file (default: ../data/wp_sync_last_id.txt)
+ * Reads settings from the SHB database settings table (set in Settings page),
+ * with environment variables as optional overrides:
+ *   SHB_BASE_URL, SHB_TAG, WP_BASE_URL, WP_USER, WP_APP_PASSWORD, WP_TAGS, WP_CATEGORIES, SHB_WP_STATE_FILE
+ * Defaults remain: base SHB https://bookmarks.thoughton.co.uk, tag=thc, WP_BASE=https://thoughton.co.uk,
+ * WP_TAGS=interesting,thc,shb, WP_CATEGORIES=Interesting stuff.
  */
 
-$config = [
-    'shb_base'       => getenv('SHB_BASE_URL') ?: 'https://bookmarks.thoughton.co.uk',
-    'tag'            => getenv('SHB_TAG') ?: 'thc',
-    // WP_BASE_URL should be the root where wp-json lives (no trailing slash)
-    'wp_base'        => rtrim(getenv('WP_BASE_URL') ?: 'https://thoughton.co.uk', '/'),
-    'wp_user'        => getenv('WP_USER') ?: 'timh',
-    'wp_app_password'=> getenv('WP_APP_PASSWORD') ?: '',
-    'wp_tags'        => getenv('WP_TAGS') ?: 'interesting,thc,shb',
-    'wp_categories'  => getenv('WP_CATEGORIES') ?: 'Interesting stuff',
-    'state_file'     => getenv('SHB_WP_STATE_FILE') ?: realpath(__DIR__ . '/..') . '/data/wp_sync_last_id.txt',
-];
+require_once __DIR__ . '/../includes/config.php';
+
+$dbSettings = loadWpSyncSettings();
+$config = mergeConfigWithEnvAndDefaults($dbSettings);
 
 if ($config['wp_app_password'] === '') {
     fwrite(STDERR, "WP_APP_PASSWORD is required (WordPress application password).\n");
@@ -41,39 +31,62 @@ $debug = getenv('DEBUG') === '1';
 try {
     $lastId = is_file($config['state_file']) ? (int)file_get_contents($config['state_file']) : 0;
 
-    $bookmark = fetchLatestBookmark($config['shb_base'], $config['tag']);
-    if ($bookmark === null) {
+    $bookmarks = fetchBookmarksWithTag($config['shb_base'], $config['tag']);
+    if (empty($bookmarks)) {
         logInfo("No bookmarks found for tag '{$config['tag']}'.");
         exit(0);
     }
 
-    if ((int)$bookmark['id'] === $lastId) {
-        logInfo("No new bookmark (last id {$lastId}).");
-        exit(0);
+    $processed = 0;
+    $skipped = 0;
+
+    foreach ($bookmarks as $bookmark) {
+        // Stop if we've reached a bookmark we've already processed
+        if ((int)$bookmark['id'] === $lastId) {
+            if ($processed === 0 && $skipped === 0) {
+                logInfo("No new bookmark (last id {$lastId}).");
+            }
+            break;
+        }
+
+        // Check if this URL already exists in WordPress
+        if (urlExistsInWordPress($config, $bookmark['url'], $debug)) {
+            logInfo("Bookmark URL already exists in WordPress, skipping id {$bookmark['id']}.");
+            file_put_contents($config['state_file'], (string)$bookmark['id']);
+            $skipped++;
+            continue;
+        }
+
+        // Post the bookmark
+        logInfo("Posting bookmark id {$bookmark['id']} titled '{$bookmark['title']}'");
+        if ($debug) {
+            logInfo("Bookmark payload: " . json_encode($bookmark, JSON_PRETTY_PRINT));
+        }
+
+        postToWordPress($config, $bookmark, $debug);
+        file_put_contents($config['state_file'], (string)$bookmark['id']);
+        logInfo("Synced bookmark id {$bookmark['id']} to WordPress.");
+        $processed++;
     }
 
-    logInfo("Posting bookmark id {$bookmark['id']} titled '{$bookmark['title']}'");
-    if ($debug) {
-        logInfo("Bookmark payload: " . json_encode($bookmark, JSON_PRETTY_PRINT));
+    if ($processed > 0 || $skipped > 0) {
+        logInfo("Processed {$processed} new bookmark(s), skipped {$skipped} existing bookmark(s).");
     }
-
-    postToWordPress($config, $bookmark, $debug);
-    file_put_contents($config['state_file'], (string)$bookmark['id']);
-    logInfo("Synced bookmark id {$bookmark['id']} to WordPress.");
 } catch (Throwable $e) {
     fwrite(STDERR, '[ERROR] ' . $e->getMessage() . "\n");
     exit(1);
 }
 
 /**
- * Fetch newest bookmark for a tag from SHB.
+ * Fetch all bookmarks with a tag from SHB (ordered newest first).
+ * Fetches the first page - if pagination is set to unlimited, gets all bookmarks.
  */
-function fetchLatestBookmark(string $base, string $tag): ?array
+function fetchBookmarksWithTag(string $base, string $tag): array
 {
     $url = rtrim($base, '/') . '/api/bookmarks.php?tag=' . rawurlencode($tag);
     $resp = httpGetJson($url);
     if ($resp === null || empty($resp['bookmarks'])) {
-        return null;
+        return [];
     }
     // Extra safety: filter by tag client-side (case-insensitive) in case server-side
     // filtering changes or fails.
@@ -89,11 +102,42 @@ function fetchLatestBookmark(string $base, string $tag): ?array
         }
         return false;
     }));
-    if (empty($matches)) {
-        return null;
-    }
     // Bookmarks are already ordered newest-first by API
-    return $matches[0];
+    return $matches;
+}
+
+/**
+ * Check if a URL already exists in WordPress posts.
+ */
+function urlExistsInWordPress(array $config, string $url, bool $debug = false): bool
+{
+    $authHeader = 'Authorization: Basic ' . base64_encode($config['wp_user'] . ':' . $config['wp_app_password']);
+    $searchUrl = rtrim($config['wp_base'], '/') . '/wp-json/wp/v2/posts?search=' . rawurlencode($url) . '&per_page=100';
+
+    try {
+        $resp = httpGetJson($searchUrl, [$authHeader]);
+        if ($resp === null || empty($resp)) {
+            return false;
+        }
+
+        // Check if any post content contains the URL
+        foreach ($resp as $post) {
+            if (isset($post['content']['rendered']) && strpos($post['content']['rendered'], $url) !== false) {
+                if ($debug) {
+                    logInfo("Found existing WordPress post #{$post['id']} with URL: {$url}");
+                }
+                return true;
+            }
+        }
+
+        return false;
+    } catch (Exception $e) {
+        if ($debug) {
+            logInfo("Error checking for existing URL: " . $e->getMessage());
+        }
+        // If check fails, assume it doesn't exist (safer to post than skip)
+        return false;
+    }
 }
 
 /**
@@ -122,6 +166,16 @@ function postToWordPress(array $config, array $bookmark, bool $debug = false): v
         'status'  => 'publish',
     ];
 
+    // Set post date from bookmark's created_at if available
+    if (isset($bookmark['created_at']) && !empty($bookmark['created_at'])) {
+        // Convert SHB datetime to WordPress format (ISO 8601)
+        $bookmarkDate = new DateTime($bookmark['created_at']);
+        $payload['date'] = $bookmarkDate->format('c'); // ISO 8601 format
+        if ($debug) {
+            logInfo("Setting post date to: " . $payload['date']);
+        }
+    }
+
     // Ensure tags exist and attach them
     $tagSlugs = array_filter(array_map('trim', explode(',', $config['wp_tags'])));
     if (!empty($tagSlugs)) {
@@ -145,15 +199,19 @@ function postToWordPress(array $config, array $bookmark, bool $debug = false): v
 /**
  * Simple GET that returns decoded JSON.
  */
-function httpGetJson(string $url): ?array
+function httpGetJson(string $url, array $headers = []): ?array
 {
     $ch = curl_init($url);
-    curl_setopt_array($ch, [
+    $curlOpts = [
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_FOLLOWLOCATION => true,
         CURLOPT_TIMEOUT => 15,
         CURLOPT_USERAGENT => 'SHB-WordPress-Sync/1.0',
-    ]);
+    ];
+    if (!empty($headers)) {
+        $curlOpts[CURLOPT_HTTPHEADER] = $headers;
+    }
+    curl_setopt_array($ch, $curlOpts);
     $body = curl_exec($ch);
     $status = curl_getinfo($ch, CURLINFO_HTTP_CODE);
     $err = curl_error($ch);
@@ -219,7 +277,7 @@ function ensureTagsExist(array $config, array $slugs, bool $debug = false): arra
         $safeSlug = normalizeSlug($slug);
 
         // Fetch existing tag by slug
-        $resp = httpGetJson($baseTagsUrl . '?slug=' . rawurlencode($safeSlug));
+        $resp = httpGetJson($baseTagsUrl . '?slug=' . rawurlencode($safeSlug), [$authHeader]);
         if (!empty($resp) && isset($resp[0]['id'])) {
             $ids[] = $resp[0]['id'];
             continue;
@@ -258,7 +316,7 @@ function ensureCategoriesExist(array $config, array $slugs, bool $debug = false)
         $safeSlug = normalizeSlug($slug);
 
         // Fetch existing category by slug
-        $resp = httpGetJson($baseCatsUrl . '?slug=' . rawurlencode($safeSlug));
+        $resp = httpGetJson($baseCatsUrl . '?slug=' . rawurlencode($safeSlug), [$authHeader]);
         if (!empty($resp) && isset($resp[0]['id'])) {
             $ids[] = $resp[0]['id'];
             continue;
@@ -294,5 +352,97 @@ function normalizeSlug(string $value): string
 function logInfo(string $msg): void
 {
     fwrite(STDOUT, '[' . date('c') . "] $msg\n");
+}
+
+/**
+ * Load WP sync settings from the database.
+ */
+function loadWpSyncSettings(): array
+{
+    global $pdo;
+    $keys = [
+        'wp_base_url',
+        'wp_user',
+        'wp_app_password',
+        'wp_watch_tag',
+        'wp_post_tags',
+        'wp_post_categories',
+        'shb_base_url',
+        'shb_tag'
+    ];
+
+    $settings = [];
+    try {
+        $placeholders = rtrim(str_repeat('?,', count($keys)), ',');
+        $stmt = $pdo->prepare("SELECT key, value FROM settings WHERE key IN ($placeholders)");
+        $stmt->execute($keys);
+        $rows = $stmt->fetchAll();
+        foreach ($rows as $row) {
+            $settings[$row['key']] = $row['value'];
+        }
+    } catch (PDOException $e) {
+        // Fail silently; will fall back to defaults/env
+    }
+
+    return $settings;
+}
+
+/**
+ * Merge DB settings with env and defaults.
+ */
+function mergeConfigWithEnvAndDefaults(array $db): array
+{
+    $defaults = [
+        'shb_base'       => 'https://bookmarks.thoughton.co.uk',
+        'tag'            => 'thc',
+        'wp_base'        => 'https://thoughton.co.uk',
+        'wp_user'        => '',
+        'wp_app_password'=> '',
+        'wp_tags'        => 'interesting,thc,shb',
+        'wp_categories'  => 'Interesting stuff',
+        'state_file'     => realpath(__DIR__ . '/..') . '/data/wp_sync_last_id.txt',
+    ];
+
+    // Populate from DB (if present)
+    $fromDb = [
+        'shb_base'      => $db['shb_base_url'] ?? null,
+        'tag'           => $db['wp_watch_tag'] ?? null,
+        'wp_base'       => $db['wp_base_url'] ?? null,
+        'wp_user'       => $db['wp_user'] ?? null,
+        'wp_app_password'=> $db['wp_app_password'] ?? null,
+        'wp_tags'       => $db['wp_post_tags'] ?? null,
+        'wp_categories' => $db['wp_post_categories'] ?? null,
+    ];
+
+    // Environment overrides (if set)
+    $fromEnv = [
+        'shb_base'       => getenv('SHB_BASE_URL') ?: null,
+        'tag'            => getenv('SHB_TAG') ?: null,
+        'wp_base'        => getenv('WP_BASE_URL') ?: null,
+        'wp_user'        => getenv('WP_USER') ?: null,
+        'wp_app_password'=> getenv('WP_APP_PASSWORD') ?: null,
+        'wp_tags'        => getenv('WP_TAGS') ?: null,
+        'wp_categories'  => getenv('WP_CATEGORIES') ?: null,
+        'state_file'     => getenv('SHB_WP_STATE_FILE') ?: null,
+    ];
+
+    $config = $defaults;
+
+    foreach ($fromDb as $key => $val) {
+        if ($val !== null && $val !== '') {
+            $config[$key] = $val;
+        }
+    }
+    foreach ($fromEnv as $key => $val) {
+        if ($val !== null && $val !== '') {
+            $config[$key] = $val;
+        }
+    }
+
+    // Normalize
+    $config['wp_base'] = rtrim($config['wp_base'], '/');
+    $config['shb_base'] = rtrim($config['shb_base'], '/');
+
+    return $config;
 }
 

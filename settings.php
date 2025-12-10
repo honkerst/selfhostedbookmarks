@@ -20,11 +20,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'show_url' => isset($_POST['show_url']) && $_POST['show_url'] === '1',
                 'show_datetime' => isset($_POST['show_datetime']) && $_POST['show_datetime'] === '1',
                 'pagination_per_page' => $_POST['pagination_per_page'] ?? '20',
-                'tag_threshold' => isset($_POST['tag_threshold']) ? max(0, (int)$_POST['tag_threshold']) : '2'
+                'tag_threshold' => isset($_POST['tag_threshold']) ? max(0, (int)$_POST['tag_threshold']) : '2',
+                // WordPress sync settings
+                'shb_base_url' => trim($_POST['shb_base_url'] ?? ''),
+                'wp_base_url' => trim($_POST['wp_base_url'] ?? ''),
+                'wp_user' => trim($_POST['wp_user'] ?? ''),
+                'wp_app_password' => trim($_POST['wp_app_password'] ?? ''),
+                'wp_watch_tag' => trim($_POST['wp_watch_tag'] ?? ''),
+                'wp_post_tags' => trim($_POST['wp_post_tags'] ?? ''),
+                'wp_post_categories' => trim($_POST['wp_post_categories'] ?? '')
             ];
         
         // Save directly to database
-        $validKeys = ['tags_alphabetical', 'show_url', 'show_datetime', 'pagination_per_page', 'tag_threshold'];
+        $validKeys = [
+            'tags_alphabetical',
+            'show_url',
+            'show_datetime',
+            'pagination_per_page',
+            'tag_threshold',
+            'shb_base_url',
+            'wp_base_url',
+            'wp_user',
+            'wp_app_password',
+            'wp_watch_tag',
+            'wp_post_tags',
+            'wp_post_categories'
+        ];
         
         foreach ($settings as $key => $value) {
             if (!in_array($key, $validKeys)) {
@@ -32,7 +53,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             
             // Handle boolean vs string values
-            if ($key === 'pagination_per_page' || $key === 'tag_threshold') {
+            if (in_array($key, ['pagination_per_page', 'tag_threshold', 'shb_base_url', 'wp_base_url', 'wp_user', 'wp_app_password', 'wp_watch_tag', 'wp_post_tags', 'wp_post_categories'])) {
                 $dbValue = (string)$value; // Store as string
             } else {
                 $dbValue = $value ? '1' : '0';
@@ -65,7 +86,7 @@ try {
     $currentSettings = [];
     foreach ($rows as $row) {
         // Handle pagination_per_page and tag_threshold as string, others as boolean
-        if ($row['key'] === 'pagination_per_page' || $row['key'] === 'tag_threshold') {
+        if (in_array($row['key'], ['pagination_per_page', 'tag_threshold', 'shb_base_url', 'wp_base_url', 'wp_user', 'wp_app_password', 'wp_watch_tag', 'wp_post_tags', 'wp_post_categories'])) {
             $currentSettings[$row['key']] = $row['value'];
         } else {
             $currentSettings[$row['key']] = $row['value'] === '1' || $row['value'] === 'true';
@@ -78,13 +99,25 @@ try {
     $currentSettings['show_datetime'] = $currentSettings['show_datetime'] ?? false;
     $currentSettings['pagination_per_page'] = $currentSettings['pagination_per_page'] ?? '20';
     $currentSettings['tag_threshold'] = $currentSettings['tag_threshold'] ?? '2';
+    $currentSettings['wp_base_url'] = $currentSettings['wp_base_url'] ?? '';
+    $currentSettings['wp_user'] = $currentSettings['wp_user'] ?? '';
+    $currentSettings['wp_app_password'] = $currentSettings['wp_app_password'] ?? '';
+    $currentSettings['wp_watch_tag'] = $currentSettings['wp_watch_tag'] ?? '';
+    $currentSettings['wp_post_tags'] = $currentSettings['wp_post_tags'] ?? 'interesting,thc,shb';
+    $currentSettings['wp_post_categories'] = $currentSettings['wp_post_categories'] ?? 'Interesting stuff';
 } catch (PDOException $e) {
     $currentSettings = [
         'tags_alphabetical' => false,
         'show_url' => true,
         'show_datetime' => false,
         'pagination_per_page' => '20',
-        'tag_threshold' => '2'
+        'tag_threshold' => '2',
+        'wp_base_url' => '',
+        'wp_user' => '',
+        'wp_app_password' => '',
+        'wp_watch_tag' => '',
+        'wp_post_tags' => 'interesting,thc,shb',
+        'wp_post_categories' => 'Interesting stuff'
     ];
 }
 ?>
@@ -227,11 +260,100 @@ try {
                         
                         <div class="setting-item">
                             <p class="setting-description">
-                                Import bookmarks from a Netscape-style HTML file (exported from Chrome, Firefox, Safari, etc.).
+                                Import bookmarks from a Netscape-style HTML file (exported from Chrome, Firefox, Safari, etc.), or a pinboard.in JSON file.
                             </p>
                             <div class="form-group">
                                 <a href="/import.php" class="btn btn-primary">Go to Import Page</a>
                             </div>
+                        </div>
+                    </div>
+
+                    <div class="settings-group">
+                        <h3>WordPress Auto-Post</h3>
+                        <p class="setting-description">
+                            Configure automatic posting of bookmarks to your WordPress site. The sync script will post the newest bookmark matching the watch tag with the tags/categories you specify below.
+                        </p>
+
+                        <div class="setting-item">
+                            <label for="shb_base_url" class="setting-label">SHB Base URL</label>
+                            <input type="text" id="shb_base_url" name="shb_base_url" class="setting-input"
+                                   value="<?php echo h($currentSettings['shb_base_url'] ?? 'https://bookmarks.thoughton.co.uk'); ?>"
+                                   placeholder="https://bookmarks.example.com">
+                            <p class="setting-description">
+                                The base URL of your SelfHostedBookmarks installation (where the API endpoints live).
+                            </p>
+                        </div>
+
+                        <div class="setting-item">
+                            <label for="wp_base_url" class="setting-label">WordPress Base URL</label>
+                            <input type="text" id="wp_base_url" name="wp_base_url" class="setting-input"
+                                   value="<?php echo h($currentSettings['wp_base_url']); ?>"
+                                   placeholder="https://example.com">
+                            <p class="setting-description">
+                                The root URL where your WordPress REST API lives (e.g., https://example.com).
+                            </p>
+                        </div>
+
+                        <div class="setting-item">
+                            <label for="wp_user" class="setting-label">WordPress Username</label>
+                            <input type="text" id="wp_user" name="wp_user" class="setting-input"
+                                   value="<?php echo h($currentSettings['wp_user']); ?>"
+                                   placeholder="wp-admin-user">
+                        </div>
+
+                        <div class="setting-item">
+                            <label for="wp_app_password" class="setting-label">WordPress Application Password</label>
+                            <input type="password" id="wp_app_password" name="wp_app_password" class="setting-input"
+                                   value="<?php echo h($currentSettings['wp_app_password']); ?>"
+                                   placeholder="Paste app password">
+                            <p class="setting-description">
+                                Create this in WordPress under your user profile → Application Passwords.
+                            </p>
+                            <p class="setting-description" style="margin-top: 0.5rem; color: var(--text-light); font-size: 0.875rem;">
+                                <strong>Security Note:</strong> This password is stored in plaintext in the database (not encrypted) because WordPress REST API authentication requires the actual password value. The SHB settings page is protected by authentication—only logged-in users can access it. To keep your credentials secure: ensure your SHB installation requires a strong password, use HTTPS, and don't share your login credentials. If your database is compromised, regenerate this application password in WordPress.
+                            </p>
+                        </div>
+
+                        <div class="setting-item">
+                            <label for="wp_watch_tag" class="setting-label">SHB Tag to Watch</label>
+                            <input type="text" id="wp_watch_tag" name="wp_watch_tag" class="setting-input"
+                                   value="<?php echo h($currentSettings['wp_watch_tag']); ?>"
+                                   placeholder="e.g., thc">
+                            <p class="setting-description">
+                                The SHB tag that triggers posting to WordPress (newest bookmark with this tag will be posted).
+                            </p>
+                        </div>
+
+                        <div class="setting-item">
+                            <label for="wp_post_tags" class="setting-label">WordPress Tags (comma-separated)</label>
+                            <input type="text" id="wp_post_tags" name="wp_post_tags" class="setting-input"
+                                   value="<?php echo h($currentSettings['wp_post_tags']); ?>"
+                                   placeholder="interesting,thc,shb">
+                        </div>
+
+                        <div class="setting-item">
+                            <label for="wp_post_categories" class="setting-label">WordPress Categories (comma-separated)</label>
+                            <input type="text" id="wp_post_categories" name="wp_post_categories" class="setting-input"
+                                   value="<?php echo h($currentSettings['wp_post_categories']); ?>"
+                                   placeholder="Interesting stuff">
+                        </div>
+
+                        <div class="setting-item">
+                            <h4>Scheduling</h4>
+                            <p class="setting-description">
+                                You will need to schedule the sync script to run at specified intervals. This can be done in a few ways:
+                            </p>
+                            <p class="setting-description" style="font-weight: 500; margin-bottom: 0.5rem;">Crontab entry:</p>
+<pre id="cron-example" class="setting-description" style="white-space: pre-wrap; word-break: break-word; background:#f5f5f5; padding:8px; border-radius:4px;">
+*/2 * * * * /usr/bin/php /path/to/bookmarks.thoughton.co.uk/scripts/shb_thc_to_wp.php >>$HOME/shb_sync.log 2>&1
+</pre>
+                            <p class="setting-description" style="margin-top: 1rem; font-weight: 500; margin-bottom: 0.5rem;">Terminal command (for control panels like Plesk and Enhance that allow you to run a command at specified intervals):</p>
+<pre id="terminal-example" class="setting-description" style="white-space: pre-wrap; word-break: break-word; background:#f5f5f5; padding:8px; border-radius:4px;">
+WP_BASE_URL="https://thoughton.co.uk" WP_USER="tim" WP_APP_PASSWORD="..." /usr/bin/php /path/to/bookmarks.thoughton.co.uk/scripts/shb_thc_to_wp.php
+</pre>
+                            <p class="setting-description">
+                                Replace the /path/to/ above with the actual path to your script, and fill in your Application Password. Environment variables are optional and will override database settings if provided.
+                            </p>
                         </div>
                     </div>
                     
@@ -259,6 +381,83 @@ try {
                 window.location.href = '/login.php';
             }
         });
+
+        // Live-update cron example based on user inputs
+        function updateCronExample() {
+            const shbBaseUrl = document.getElementById('shb_base_url')?.value || 'https://bookmarks.thoughton.co.uk';
+            const wpBaseUrl = document.getElementById('wp_base_url')?.value || '';
+            const wpUser = document.getElementById('wp_user')?.value || '';
+            const wpAppPassword = document.getElementById('wp_app_password')?.value || '';
+            const watchTag = document.getElementById('wp_watch_tag')?.value || '';
+            const wpTags = document.getElementById('wp_post_tags')?.value || '';
+            const wpCategories = document.getElementById('wp_post_categories')?.value || '';
+
+            // Extract domain from SHB base URL to suggest script path
+            let scriptPath = '/path/to/bookmarks.thoughton.co.uk/scripts/shb_thc_to_wp.php';
+            try {
+                const url = new URL(shbBaseUrl);
+                const hostname = url.hostname;
+                // Suggest path based on hostname
+                scriptPath = `/path/to/${hostname}/scripts/shb_thc_to_wp.php`;
+            } catch (e) {
+                // Keep default if URL parsing fails
+            }
+
+            // Build cron command - show that settings are read from database
+            const cronSchedule = '*/2 * * * *';
+            const command = `/usr/bin/php ${scriptPath} >>$HOME/shb_sync.log 2>&1`;
+
+            // Optionally show env var overrides (for reference)
+            const envVars = [];
+            if (wpBaseUrl) envVars.push(`WP_BASE_URL="${wpBaseUrl}"`);
+            if (wpUser) envVars.push(`WP_USER="${wpUser}"`);
+            if (wpAppPassword) envVars.push(`WP_APP_PASSWORD="${wpAppPassword.replace(/./g, '*')}"`); // Mask password
+            if (watchTag) envVars.push(`SHB_TAG="${watchTag}"`);
+            if (wpTags) envVars.push(`WP_TAGS="${wpTags}"`);
+            if (wpCategories) envVars.push(`WP_CATEGORIES="${wpCategories}"`);
+
+            // Build cron command: schedule + env vars (if any) + command
+            let cronCmd;
+            if (envVars.length > 0) {
+                cronCmd = `${cronSchedule} ${envVars.join(' ')} ${command}`;
+                cronCmd += '\n\n# Note: Settings are read from the database. Env vars above are optional overrides.';
+            } else {
+                cronCmd = `${cronSchedule} ${command}`;
+                cronCmd += '\n\n# Settings are read from the database (no env vars needed).';
+            }
+
+            const cronExample = document.getElementById('cron-example');
+            if (cronExample) {
+                cronExample.textContent = cronCmd;
+            }
+
+            // Build terminal command (no schedule, no log redirection)
+            const terminalCommand = `/usr/bin/php ${scriptPath}`;
+            let terminalCmd;
+            if (envVars.length > 0) {
+                terminalCmd = `${envVars.join(' ')} ${terminalCommand}`;
+            } else {
+                terminalCmd = terminalCommand;
+            }
+
+            const terminalExample = document.getElementById('terminal-example');
+            if (terminalExample) {
+                terminalExample.textContent = terminalCmd;
+            }
+        }
+
+        // Add event listeners to all relevant input fields
+        const inputsToWatch = ['shb_base_url', 'wp_base_url', 'wp_user', 'wp_app_password', 'wp_watch_tag', 'wp_post_tags', 'wp_post_categories'];
+        inputsToWatch.forEach(id => {
+            const input = document.getElementById(id);
+            if (input) {
+                input.addEventListener('input', updateCronExample);
+                input.addEventListener('change', updateCronExample);
+            }
+        });
+
+        // Update on page load
+        updateCronExample();
     </script>
 </body>
 </html>
