@@ -49,7 +49,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         autocomplete="username"
                         placeholder="Leave blank if not used">
                 </div>
-
+                
                 <div class="form-group">
                     <label for="password">Password</label>
                     <input

@@ -168,6 +168,29 @@ del.icio.us-clone/
 
 **Session issues**: Check PHP session configuration and ensure sessions directory is writable.
 
+## WordPress auto-post from tagged bookmarks (optional)
+
+You can mirror a tag (e.g., `thc`) from SelfHostedBookmarks to a WordPress site using the helper script in `scripts/shb_thc_to_wp.php`. It polls SHB for the newest bookmark with that tag and publishes a post via the WordPress REST API.
+
+1. Create a WordPress Application Password for the account that should publish posts.
+2. Set environment variables:
+   - `WP_APP_PASSWORD` (required)
+   - `SHB_BASE_URL` (default: `https://bookmarks.thoughton.co.uk`)
+   - `SHB_TAG` (default: `thc`)
+   - `WP_BASE_URL` (default: `https://thoughton.co.uk/_wp`)
+   - `WP_USER` (default: `selfhostedbookmarks`)
+   - `SHB_WP_STATE_FILE` (default: `data/wp_sync_last_id.txt`)
+3. Run the script manually to verify:
+   ```bash
+   WP_APP_PASSWORD=your_app_password php scripts/shb_thc_to_wp.php
+   ```
+4. Add a cron entry to run every few minutes:
+   ```
+   */2 * * * * WP_APP_PASSWORD=your_app_password php /path/to/scripts/shb_thc_to_wp.php >>$HOME/shb_thc.log 2>&1
+   ```
+
+The script skips posting if there is no new bookmark since the last run. It stores the last posted bookmark ID in `data/wp_sync_last_id.txt` (configurable via `SHB_WP_STATE_FILE`).
+
 ## License
 
 Free to use and modify for personal use.
