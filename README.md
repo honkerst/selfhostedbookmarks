@@ -295,7 +295,11 @@ The script reads all settings from the database, so you don't need to set enviro
 
 Free to use and modify for personal use.
 
+## Demo
+
+See it in action: https://bookmarks.thoughton.co.uk
+
 ## Credits
 
-Created by Tim Houghton - https://thoughton.co.uk
+Tim Houghton - https://thoughton.co.uk
 
