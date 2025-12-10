@@ -63,10 +63,6 @@ A simple bookmarking service in memory of del.icio.us, built with vanilla PHP an
 
 4. The database will be created automatically on first run.
 
-## Setup Bookmarklet
-
-1. Visit the Settings page and drag the bookmarklet to your browser toolbar.
-
 ## Usage
 
 ### Accessing the Application
@@ -92,6 +88,10 @@ A simple bookmarking service in memory of del.icio.us, built with vanilla PHP an
 - **Publish to WordPress**: If WordPress is configured, each bookmark has a 📤 button to manually publish to WordPress
 
 ### Adding Bookmarks
+
+#### Setup Bookmarklet
+
+1. Visit the Settings page and drag the bookmarklet to your browser toolbar.
 
 #### Via Bookmarklet (Recommended)
 
