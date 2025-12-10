@@ -106,7 +106,20 @@ switch ($method) {
             
             // Re-index array after filtering
             $tags = array_values($tags);
-            echo json_encode(['tags' => $tags]);
+            
+            // For authenticated users, also get count of private bookmarks
+            $privateCount = 0;
+            if ($isAuthenticated && empty($query) && !$all) {
+                $privateStmt = $pdo->prepare("SELECT COUNT(*) as count FROM bookmarks WHERE is_private = 1");
+                $privateStmt->execute();
+                $privateResult = $privateStmt->fetch();
+                $privateCount = (int)($privateResult['count'] ?? 0);
+            }
+            
+            echo json_encode([
+                'tags' => $tags,
+                'private_count' => $privateCount
+            ]);
         } catch (PDOException $e) {
             http_response_code(500);
             echo json_encode(['error' => 'Database error occurred']);

@@ -10,8 +10,10 @@ if (typeof window.IS_AUTHENTICATED === 'undefined') {
 let currentPage = 1;
 let currentTag = '';
 let currentSearch = '';
+let currentPrivate = false;
 let bookmarks = [];
 let tags = [];
+let privateCount = 0;
 let settings = {
     tags_alphabetical: false,
     show_url: true,
@@ -126,6 +128,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Load settings
     await loadSettings();
     
+    // Read URL parameters and set initial filter state
+    readUrlParams();
+    
     // Now load data - auth state is verified, settings loaded
     loadTags();
     loadBookmarks();
@@ -146,6 +151,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             currentSearch = input.value.trim();
             currentPage = 1;
             loadBookmarks();
+            loadTags(); // Reload to update active state
             window.scrollTo({ top: 0, behavior: 'smooth' });
         });
     }
@@ -158,13 +164,107 @@ document.addEventListener('DOMContentLoaded', async () => {
             currentSearch = '';
             currentPage = 1;
             loadBookmarks();
+            loadTags(); // Reload to update active state
             window.scrollTo({ top: 0, behavior: 'smooth' });
         });
     }
     
     // Attach logout handler
     attachLogoutHandler();
+    
+    // Handle browser back/forward buttons
+    window.addEventListener('popstate', () => {
+        readUrlParams();
+        loadTags();
+        loadBookmarks();
+    });
 });
+
+/**
+ * Read URL parameters and set filter state
+ */
+function readUrlParams() {
+    const params = new URLSearchParams(window.location.search);
+    
+    // Read private parameter first (takes precedence)
+    const privateParam = params.get('private');
+    if (privateParam === '1') {
+        currentPrivate = true;
+        currentTag = ''; // Clear tag when filtering by private
+    } else {
+        // Read tag parameter (only if not filtering by private)
+        const tagParam = params.get('tag');
+        if (tagParam === '__private__') {
+            // Special case: private filter via tag parameter
+            currentTag = '';
+            currentPrivate = true;
+        } else if (tagParam) {
+            currentTag = tagParam;
+            currentPrivate = false;
+        } else {
+            currentTag = '';
+            // Only set private to false if we're not filtering by anything
+            if (privateParam === '0') {
+                currentPrivate = false;
+            }
+        }
+    }
+    
+    // Read search parameter
+    const searchParam = params.get('search');
+    if (searchParam !== null) {
+        currentSearch = searchParam;
+        const searchInput = document.getElementById('search-input');
+        if (searchInput) {
+            searchInput.value = searchParam;
+        }
+    } else {
+        currentSearch = '';
+    }
+    
+    // Read page parameter
+    const pageParam = params.get('page');
+    if (pageParam) {
+        currentPage = parseInt(pageParam) || 1;
+    } else {
+        currentPage = 1;
+    }
+}
+
+/**
+ * Update URL to reflect current filter state
+ */
+function updateUrl() {
+    const params = new URLSearchParams();
+    
+    // Add private parameter if filtering by private
+    if (currentPrivate) {
+        params.set('private', '1');
+    }
+    
+    // Add tag parameter if filtering by tag (and not private)
+    if (currentTag && !currentPrivate) {
+        params.set('tag', currentTag);
+    }
+    
+    // Add search parameter if searching
+    if (currentSearch) {
+        params.set('search', currentSearch);
+    }
+    
+    // Add page parameter if not on first page
+    if (currentPage > 1) {
+        params.set('page', currentPage.toString());
+    }
+    
+    // Build new URL
+    const newUrl = params.toString() 
+        ? window.location.pathname + '?' + params.toString()
+        : window.location.pathname;
+    
+    // Update URL without reloading page
+    window.history.pushState({}, '', newUrl);
+}
 
 /**
  * Load bookmarks
@@ -183,12 +283,20 @@ async function loadBookmarks() {
             params.search = currentSearch;
         }
         
+        // Add private parameter if filtering by private (only when authenticated)
+        if (currentPrivate && window.IS_AUTHENTICATED === true) {
+            params.private = '1';
+        }
+        
         const data = await API.getBookmarks(params);
         bookmarks = data.bookmarks || [];
         
         // Render bookmarks - they will check window.IS_AUTHENTICATED which was verified on page load
         renderBookmarks();
         renderPagination(data.pagination);
+        
+        // Update URL to reflect current state
+        updateUrl();
     } catch (error) {
         console.error('Failed to load bookmarks:', error);
         showError('Failed to load bookmarks');
@@ -235,6 +343,7 @@ async function loadTags() {
     try {
         const data = await API.getTags();
         tags = data.tags || [];
+        privateCount = data.private_count || 0;
         renderTags();
     } catch (error) {
         console.error('Failed to load tags:', error);
@@ -345,24 +454,40 @@ function renderTags() {
     const container = document.getElementById('tags-sidebar');
     if (!container) return;
     
-    if (tags.length === 0) {
-        container.innerHTML = '<div class="empty-tags">No tags yet</div>';
-        return;
+    // Determine if we should show clear button
+    const hasActiveFilter = currentTag || currentPrivate || currentSearch;
+    
+    // Build private tag HTML (only show when authenticated and there are private bookmarks)
+    let privateTagHtml = '';
+    if (window.IS_AUTHENTICATED === true && privateCount > 0) {
+        privateTagHtml = `
+            <div class="tag-item ${currentPrivate ? 'active' : ''}" 
+                 data-tag="__private__">
+                <span class="tag-name">Private</span>
+                <span class="tag-count">${privateCount}</span>
+            </div>
+        `;
     }
+    
+    // Build regular tags HTML
+    const regularTagsHtml = tags.length > 0 
+        ? tags.map(tag => `
+            <div class="tag-item ${currentTag === tag.name && !currentPrivate ? 'active' : ''}" 
+                 data-tag="${escapeHtml(tag.name)}">
+                <span class="tag-name">#${escapeHtml(tag.name)}</span>
+                <span class="tag-count">${tag.count}</span>
+            </div>
+        `).join('')
+        : '<div class="empty-tags">No tags yet</div>';
     
     container.innerHTML = `
         <div class="tags-header">
-        <h3>Tags</h3>
-            ${currentTag ? '<button id="clear-tag-filter" class="btn btn-small">Clear filter</button>' : ''}
+            <h3>Tags</h3>
+            ${hasActiveFilter ? '<button id="clear-tag-filter" class="btn btn-small">Clear filter</button>' : ''}
         </div>
         <div class="tags-list">
-            ${tags.map(tag => `
-                <div class="tag-item ${currentTag === tag.name ? 'active' : ''}" 
-                     data-tag="${escapeHtml(tag.name)}">
-                    <span class="tag-name">#${escapeHtml(tag.name)}</span>
-                    <span class="tag-count">${tag.count}</span>
-                </div>
-            `).join('')}
+            ${privateTagHtml}
+            ${regularTagsHtml}
         </div>
     `;
     
@@ -370,14 +495,18 @@ function renderTags() {
     container.querySelectorAll('.tag-item').forEach(item => {
         item.addEventListener('click', () => {
             const tag = item.dataset.tag;
-            filterByTag(tag);
+            if (tag === '__private__') {
+                filterByPrivate();
+            } else {
+                filterByTag(tag);
+            }
         });
     });
     
     const clearBtn = document.getElementById('clear-tag-filter');
     if (clearBtn) {
         clearBtn.addEventListener('click', () => {
-            filterByTag('');
+            clearFilters();
         });
     }
 }
@@ -386,8 +515,40 @@ function renderTags() {
  * Filter by tag
  */
 function filterByTag(tag) {
-    currentTag = tag;
+    currentTag = tag || '';
+    currentPrivate = false; // Clear private filter when filtering by tag
     currentPage = 1;
+    loadBookmarks();
+    loadTags(); // Reload to update active state
+    // Scroll to top of page
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+/**
+ * Filter by private bookmarks
+ */
+function filterByPrivate() {
+    currentPrivate = true;
+    currentTag = ''; // Clear tag filter when filtering by private
+    currentPage = 1;
+    loadBookmarks();
+    loadTags(); // Reload to update active state
+    // Scroll to top of page
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+/**
+ * Clear all filters
+ */
+function clearFilters() {
+    currentTag = '';
+    currentPrivate = false;
+    currentSearch = '';
+    currentPage = 1;
+    const searchInput = document.getElementById('search-input');
+    if (searchInput) {
+        searchInput.value = '';
+    }
     loadBookmarks();
     loadTags(); // Reload to update active state
     // Scroll to top of page
