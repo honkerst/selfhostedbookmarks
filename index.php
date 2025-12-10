@@ -62,7 +62,7 @@ header('Expires: 0');
                                    value="<?php echo h($_GET['search'] ?? ''); ?>"
                                    class="search-input">
                             <button type="submit" class="btn btn-primary">Search</button>
-                            <button type="button" id="clear-search" class="btn btn-small">Clear</button>
+                            <button type="button" id="clear-search" class="btn">Clear</button>
                         </form>
                     </div>
                     
