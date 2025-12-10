@@ -235,8 +235,16 @@ body {
     border-radius: 1rem;
     font-size: 0.875rem;
     font-weight: 500;
-    cursor: pointer;
     transition: background 0.2s;
+}
+
+.clickable-tag {
+    cursor: pointer;
+}
+
+.clickable-tag:hover {
+    background: var(--primary-color);
+    color: var(--bg-color);
 }
 
 .tag:hover {
@@ -287,10 +295,17 @@ body {
     box-shadow: var(--shadow);
 }
 
+.tags-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
 .tags-sidebar h3 {
     font-size: 1.125rem;
     font-weight: 600;
-    margin-bottom: 1rem;
+    margin: 0;
     color: var(--text-color);
 }
 

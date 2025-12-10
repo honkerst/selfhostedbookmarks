@@ -146,6 +146,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             currentSearch = input.value.trim();
             currentPage = 1;
             loadBookmarks();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         });
     }
     
@@ -157,6 +158,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             currentSearch = '';
             currentPage = 1;
             loadBookmarks();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         });
     }
     
@@ -223,7 +225,7 @@ function renderBookmarkTags(tagArray) {
         tagsToRender.sort((a, b) => a.localeCompare(b));
     }
     
-    return tagsToRender.map(tag => `<span class="tag">#${escapeHtml(tag)}</span>`).join('');
+    return tagsToRender.map(tag => `<span class="tag clickable-tag" data-tag="${escapeHtml(tag)}">#${escapeHtml(tag)}</span>`).join('');
 }
 
 /**
@@ -324,6 +326,16 @@ function renderBookmarks() {
             });
         });
     }
+    
+    // Attach click handlers to bookmark tags
+    container.querySelectorAll('.clickable-tag').forEach(tag => {
+        tag.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const tagName = tag.dataset.tag;
+            filterByTag(tagName);
+        });
+    });
 }
 
 /**
@@ -339,7 +351,10 @@ function renderTags() {
     }
     
     container.innerHTML = `
-        <h3>Tags</h3>
+        <div class="tags-header">
+            <h3>Tags</h3>
+            ${currentTag ? '<button id="clear-tag-filter" class="btn btn-small">Clear filter</button>' : ''}
+        </div>
         <div class="tags-list">
             ${tags.map(tag => `
                 <div class="tag-item ${currentTag === tag.name ? 'active' : ''}" 
@@ -349,7 +364,6 @@ function renderTags() {
                 </div>
             `).join('')}
         </div>
-        ${currentTag ? '<button id="clear-tag-filter" class="btn btn-small">Clear filter</button>' : ''}
     `;
     
     // Attach event listeners
@@ -376,6 +390,8 @@ function filterByTag(tag) {
     currentPage = 1;
     loadBookmarks();
     loadTags(); // Reload to update active state
+    // Scroll to top of page
+    window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 /**
