@@ -87,11 +87,11 @@ A simple bookmarking service in memory of del.icio.us, built with vanilla PHP an
 - **Pagination**: Navigate through pages of bookmarks (configurable in Settings)
 - **Publish to WordPress**: If WordPress is configured, each bookmark has a 📤 button to manually publish to WordPress
 
-### Adding Bookmarks
-
-#### Setup Bookmarklet
+### Setup Bookmarklet
 
 1. Visit the Settings page and drag the bookmarklet to your browser toolbar.
+
+### Adding Bookmarks
 
 #### Via Bookmarklet (Recommended)
 
