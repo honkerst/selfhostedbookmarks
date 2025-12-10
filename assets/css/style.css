@@ -153,6 +153,10 @@ body {
     transition: transform 0.2s, box-shadow 0.2s;
 }
 
+.bookmark-card-private {
+    background: #f3f3f3;
+}
+
 .bookmark-card:hover {
     transform: translateY(-2px);
     box-shadow: var(--shadow-lg);
@@ -266,7 +270,7 @@ body {
 }
 
 .private-badge {
-    background: var(--bg-dark);
+    background: var(--border-color);
     color: var(--text-light);
     padding: 0.25rem 0.5rem;
     border-radius: 0.25rem;

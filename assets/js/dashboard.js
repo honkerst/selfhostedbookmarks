@@ -254,7 +254,7 @@ function renderBookmarks() {
     }
     
     container.innerHTML = bookmarks.map(bookmark => `
-        <div class="bookmark-card" data-id="${bookmark.id}">
+        <div class="bookmark-card${bookmark.is_private ? ' bookmark-card-private' : ''}" data-id="${bookmark.id}">
             <div class="bookmark-header">
                 <h3 class="bookmark-title">
                     <a href="${escapeHtml(bookmark.url)}" target="_blank" rel="noopener">
@@ -352,7 +352,7 @@ function renderTags() {
     
     container.innerHTML = `
         <div class="tags-header">
-            <h3>Tags</h3>
+        <h3>Tags</h3>
             ${currentTag ? '<button id="clear-tag-filter" class="btn btn-small">Clear filter</button>' : ''}
         </div>
         <div class="tags-list">
