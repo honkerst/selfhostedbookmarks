@@ -194,7 +194,7 @@ try {
                                        value="1" 
                                        <?php echo $currentSettings['tags_alphabetical'] ? 'checked' : ''; ?>>
                                 <span class="toggle-text">
-                                    Always show tags for bookmarks in alphabetical order?
+                                    Always show tags for bookmarks in alphabetical order
                                 </span>
                             </label>
                             <p class="setting-description">
@@ -209,7 +209,7 @@ try {
                                        value="1" 
                                        <?php echo $currentSettings['show_url'] ? 'checked' : ''; ?>>
                                 <span class="toggle-text">
-                                    Display the URL under each bookmark title?
+                                    Display the URL under each bookmark title
                                 </span>
                             </label>
                             <p class="setting-description">
@@ -224,7 +224,7 @@ try {
                                        value="1" 
                                        <?php echo $currentSettings['show_datetime'] ? 'checked' : ''; ?>>
                                 <span class="toggle-text">
-                                    Show exact date and time on bookmarks?
+                                    Show exact date and time on bookmarks
                                 </span>
                             </label>
                             <p class="setting-description">
