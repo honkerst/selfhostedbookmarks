@@ -21,6 +21,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'show_datetime' => isset($_POST['show_datetime']) && $_POST['show_datetime'] === '1',
                 'pagination_per_page' => $_POST['pagination_per_page'] ?? '20',
                 'tag_threshold' => isset($_POST['tag_threshold']) ? max(0, (int)$_POST['tag_threshold']) : '2',
+                'bookmarklet_default_private' => isset($_POST['bookmarklet_default_private']) && $_POST['bookmarklet_default_private'] === '1',
                 // WordPress sync settings
                 'shb_base_url' => trim($_POST['shb_base_url'] ?? ''),
                 'wp_base_url' => trim($_POST['wp_base_url'] ?? ''),
@@ -48,6 +49,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'show_datetime',
             'pagination_per_page',
             'tag_threshold',
+            'bookmarklet_default_private',
             'shb_base_url',
             'wp_base_url',
             'wp_user',
@@ -110,6 +112,7 @@ try {
     $currentSettings['show_datetime'] = $currentSettings['show_datetime'] ?? false;
     $currentSettings['pagination_per_page'] = $currentSettings['pagination_per_page'] ?? '20';
     $currentSettings['tag_threshold'] = $currentSettings['tag_threshold'] ?? '2';
+    $currentSettings['bookmarklet_default_private'] = $currentSettings['bookmarklet_default_private'] ?? false;
     $currentSettings['wp_connection_tested'] = $currentSettings['wp_connection_tested'] ?? '0';
     $currentSettings['wp_base_url'] = $currentSettings['wp_base_url'] ?? '';
     $currentSettings['wp_user'] = $currentSettings['wp_user'] ?? '';
@@ -295,6 +298,21 @@ try {
                             <p class="setting-description" style="margin-top: 1rem;">
                                 <strong>Tip:</strong> Select text on a webpage before clicking the bookmarklet to include it as the description.
                             </p>
+                            
+                            <div class="setting-item" style="margin-top: 1.5rem;">
+                                <label class="toggle-label">
+                                    <input type="checkbox" 
+                                           name="bookmarklet_default_private" 
+                                           value="1" 
+                                           <?php echo $currentSettings['bookmarklet_default_private'] ? 'checked' : ''; ?>>
+                                    <span class="toggle-text">
+                                        Add bookmarks as private by default
+                                    </span>
+                                </label>
+                                <p class="setting-description">
+                                    When enabled, the "Private" checkbox in the bookmarklet popup will be pre-checked.
+                                </p>
+                            </div>
                         </div>
                     </div>
                     

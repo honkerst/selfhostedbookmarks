@@ -4,6 +4,7 @@
 
 let autocompleteTimeout;
 let allTags = [];
+let selectedAutocompleteIndex = -1;
 
 document.addEventListener('DOMContentLoaded', async () => {
     const form = document.getElementById('bookmarklet-form');
@@ -41,6 +42,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         tagsInput.addEventListener('input', (e) => {
             clearTimeout(autocompleteTimeout);
             const value = e.target.value.trim();
+            selectedAutocompleteIndex = -1;
             
             if (value.length > 0) {
                 autocompleteTimeout = setTimeout(() => {
@@ -53,6 +55,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         
         tagsInput.addEventListener('focus', () => {
             const value = tagsInput.value.trim();
+            selectedAutocompleteIndex = -1;
             if (value.length > 0) {
                 showAutocomplete(value);
             }
@@ -61,6 +64,46 @@ document.addEventListener('DOMContentLoaded', async () => {
         tagsInput.addEventListener('blur', () => {
             // Delay hiding to allow clicking on suggestions
             setTimeout(() => hideAutocomplete(), 200);
+        });
+        
+        // Keyboard navigation
+        tagsInput.addEventListener('keydown', (e) => {
+            const container = document.getElementById('tag-autocomplete');
+            if (!container || container.style.display === 'none') {
+                return;
+            }
+            
+            const items = container.querySelectorAll('.autocomplete-item');
+            if (items.length === 0) {
+                return;
+            }
+            
+            switch (e.key) {
+                case 'ArrowDown':
+                    e.preventDefault();
+                    selectedAutocompleteIndex = (selectedAutocompleteIndex + 1) % items.length;
+                    updateAutocompleteSelection(items);
+                    break;
+                case 'ArrowUp':
+                    e.preventDefault();
+                    selectedAutocompleteIndex = selectedAutocompleteIndex <= 0 
+                        ? items.length - 1 
+                        : selectedAutocompleteIndex - 1;
+                    updateAutocompleteSelection(items);
+                    break;
+                case 'Enter':
+                    e.preventDefault();
+                    if (selectedAutocompleteIndex >= 0 && selectedAutocompleteIndex < items.length) {
+                        const selectedItem = items[selectedAutocompleteIndex];
+                        const currentTag = getCurrentTag(tagsInput.value, tagsInput.selectionStart || tagsInput.value.length);
+                        selectAutocompleteTag(selectedItem.dataset.tag, currentTag);
+                    }
+                    break;
+                case 'Escape':
+                    e.preventDefault();
+                    hideAutocomplete();
+                    break;
+            }
         });
     }
 });
@@ -184,6 +227,29 @@ async function loadExistingBookmark() {
 }
 
 /**
+ * Get current tag being typed
+ */
+function getCurrentTag(value, cursorPos) {
+    const beforeCursor = value.substring(0, cursorPos);
+    const lastComma = beforeCursor.lastIndexOf(',');
+    return beforeCursor.substring(lastComma + 1).trim();
+}
+
+/**
+ * Update autocomplete selection highlighting
+ */
+function updateAutocompleteSelection(items) {
+    items.forEach((item, index) => {
+        if (index === selectedAutocompleteIndex) {
+            item.classList.add('autocomplete-selected');
+            item.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        } else {
+            item.classList.remove('autocomplete-selected');
+        }
+    });
+}
+
+/**
  * Show tag autocomplete
  */
 function showAutocomplete(query) {
@@ -194,9 +260,7 @@ function showAutocomplete(query) {
     const input = document.getElementById('tags');
     const value = input.value;
     const cursorPos = input.selectionStart || value.length;
-    const beforeCursor = value.substring(0, cursorPos);
-    const lastComma = beforeCursor.lastIndexOf(',');
-    const currentTag = beforeCursor.substring(lastComma + 1).trim();
+    const currentTag = getCurrentTag(value, cursorPos);
     
     if (currentTag.length === 0) {
         hideAutocomplete();
@@ -221,6 +285,7 @@ function showAutocomplete(query) {
     `).join('');
     
     container.style.display = 'block';
+    selectedAutocompleteIndex = -1;
     
     // Attach click handlers
     container.querySelectorAll('.autocomplete-item').forEach(item => {
@@ -254,6 +319,7 @@ function selectAutocompleteTag(tag, currentTag) {
     input.focus();
     input.setSelectionRange(newValue.length, newValue.length);
     
+    selectedAutocompleteIndex = -1;
     hideAutocomplete();
 }
 

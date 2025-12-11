@@ -717,8 +717,12 @@ function setupTagAutocomplete(bookmarkId) {
     
     let autocompleteTimeout;
     
+    // Store selected index on input element
+    input._autocompleteIndex = -1;
+    
     input.addEventListener('input', () => {
         clearTimeout(autocompleteTimeout);
+        input._autocompleteIndex = -1;
         autocompleteTimeout = setTimeout(() => {
             showEditAutocomplete(input, container, bookmarkId);
         }, 300);
@@ -731,10 +735,70 @@ function setupTagAutocomplete(bookmarkId) {
         }, 200);
     });
     
+    // Keyboard navigation
+    input.addEventListener('keydown', (e) => {
+        if (container.style.display === 'none') {
+            return;
+        }
+        
+        const items = container.querySelectorAll('.autocomplete-item');
+        if (items.length === 0) {
+            return;
+        }
+        
+        switch (e.key) {
+            case 'ArrowDown':
+                e.preventDefault();
+                input._autocompleteIndex = (input._autocompleteIndex + 1) % items.length;
+                updateEditAutocompleteSelection(items, input._autocompleteIndex);
+                break;
+            case 'ArrowUp':
+                e.preventDefault();
+                input._autocompleteIndex = input._autocompleteIndex <= 0 
+                    ? items.length - 1 
+                    : input._autocompleteIndex - 1;
+                updateEditAutocompleteSelection(items, input._autocompleteIndex);
+                break;
+            case 'Enter':
+                e.preventDefault();
+                if (input._autocompleteIndex >= 0 && input._autocompleteIndex < items.length) {
+                    const selectedItem = items[input._autocompleteIndex];
+                    const value = input.value;
+                    const cursorPos = input.selectionStart || value.length;
+                    const beforeCursor = value.substring(0, cursorPos);
+                    const lastComma = beforeCursor.lastIndexOf(',');
+                    const currentTag = beforeCursor.substring(lastComma + 1).trim();
+                    selectEditAutocompleteTag(input, selectedItem.dataset.tag, currentTag);
+                    container.style.display = 'none';
+                    input._autocompleteIndex = -1;
+                }
+                break;
+            case 'Escape':
+                e.preventDefault();
+                container.style.display = 'none';
+                input._autocompleteIndex = -1;
+                break;
+        }
+    });
+    
     // Hide autocomplete when clicking outside
     document.addEventListener('click', (e) => {
         if (!container.contains(e.target) && e.target !== input) {
             container.style.display = 'none';
+        }
+    });
+}
+
+/**
+ * Update autocomplete selection highlighting for edit form
+ */
+function updateEditAutocompleteSelection(items, selectedIndex) {
+    items.forEach((item, index) => {
+        if (index === selectedIndex) {
+            item.classList.add('autocomplete-selected');
+            item.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        } else {
+            item.classList.remove('autocomplete-selected');
         }
     });
 }
@@ -772,6 +836,13 @@ function showEditAutocomplete(input, container, bookmarkId) {
     `).join('');
     
     container.style.display = 'block';
+    
+    // Reset selection when showing new results
+    if (!input._autocompleteIndex) {
+        input._autocompleteIndex = -1;
+    } else {
+        input._autocompleteIndex = -1;
+    }
     
     // Attach click handlers
     container.querySelectorAll('.autocomplete-item').forEach(item => {

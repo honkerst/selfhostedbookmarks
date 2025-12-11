@@ -8,6 +8,19 @@ requireAuth();
 $url = $_GET['url'] ?? '';
 $title = isset($_GET['title']) ? urldecode($_GET['title']) : '';
 $description = isset($_GET['description']) ? urldecode($_GET['description']) : '';
+
+// Check if bookmarks should be private by default
+$defaultPrivate = false;
+try {
+    $stmt = $pdo->prepare("SELECT value FROM settings WHERE key = 'bookmarklet_default_private'");
+    $stmt->execute();
+    $setting = $stmt->fetch();
+    if ($setting && $setting['value'] === '1') {
+        $defaultPrivate = true;
+    }
+} catch (PDOException $e) {
+    // Use default (false) if error
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -63,7 +76,7 @@ $description = isset($_GET['description']) ? urldecode($_GET['description']) : '
             
             <div class="form-group">
                 <label>
-                    <input type="checkbox" id="is_private" name="is_private" value="1">
+                    <input type="checkbox" id="is_private" name="is_private" value="1" <?php echo $defaultPrivate ? 'checked' : ''; ?>>
                     Private
                 </label>
             </div>
