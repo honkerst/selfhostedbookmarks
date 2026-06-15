@@ -292,7 +292,7 @@ try {
                                 <a href="<?php echo h($bookmarkletUrl); ?>" 
                                    class="bookmarklet-link"
                                    style="display: inline-block; background: var(--primary-color); color: white; padding: 0.75rem 1rem; border-radius: var(--border-radius); text-decoration: none; font-weight: 500; transition: background 0.2s;">
-                                    +📌 Add to <?php echo h(defined('SITE_NAME') ? SITE_NAME : 'SelfHostedBookmarks'); ?>
+                                    Add to SelfHostedBookmarks
                                 </a>
                             </div>
                             <p class="setting-description" style="margin-top: 1rem;">

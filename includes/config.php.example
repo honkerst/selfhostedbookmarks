@@ -85,7 +85,7 @@ define('PASSWORD_HASH', $passwordHash);
 // Site configuration
 // Default values are hardcoded in index.php HTML below
 // To override defaults, uncomment and set custom values here:
-define('SITE_NAME', 'timhBookmarks');
+define('SITE_NAME', 'SelfHostedBookmarks');
 define('SITE_SUBTITLE', 'interesting links');
 
 // Check if user has defined custom values, otherwise leave undefined (will use HTML defaults)
