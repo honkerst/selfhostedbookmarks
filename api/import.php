@@ -7,6 +7,7 @@ require_once __DIR__ . '/../includes/functions.php';
 requireAuth();
 
 header('Content-Type: application/json');
+setApiNoCacheHeaders();
 
 $method = $_SERVER['REQUEST_METHOD'];
 

@@ -6,6 +6,7 @@ require_once __DIR__ . '/../includes/auth.php';
 $isAuthenticated = isAuthenticated();
 
 header('Content-Type: application/json');
+setApiNoCacheHeaders();
 
 $method = $_SERVER['REQUEST_METHOD'];
 

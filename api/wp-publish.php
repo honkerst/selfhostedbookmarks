@@ -11,6 +11,7 @@ if (!isAuthenticated()) {
 }
 
 header('Content-Type: application/json');
+setApiNoCacheHeaders();
 
 $method = $_SERVER['REQUEST_METHOD'];
 

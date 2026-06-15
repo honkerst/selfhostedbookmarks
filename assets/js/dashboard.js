@@ -315,10 +315,7 @@ async function loadSettings() {
         const data = await API.getSettings();
         settings = data.settings || settings; // Use defaults if API fails
         
-        // Check if WordPress is configured AND connection has been tested
-        const wpSettingsExist = !!(settings.wp_base_url && settings.wp_user && settings.wp_app_password);
-        const wpConnectionTested = settings.wp_connection_tested === '1' || settings.wp_connection_tested === 1;
-        wpConfigured = wpSettingsExist && wpConnectionTested;
+        wpConfigured = settings.wp_configured === true || settings.wp_configured === '1';
     } catch (error) {
         console.error('Failed to load settings:', error);
         // Use defaults

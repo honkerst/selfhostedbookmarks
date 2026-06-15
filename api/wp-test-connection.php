@@ -10,7 +10,22 @@ if (!isAuthenticated()) {
     exit;
 }
 
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    http_response_code(405);
+    echo json_encode(['error' => 'Method not allowed']);
+    exit;
+}
+
 header('Content-Type: application/json');
+setApiNoCacheHeaders();
+
+$data = json_decode(file_get_contents('php://input'), true) ?? [];
+$csrfToken = $data['csrf_token'] ?? '';
+if (!verifyCSRFToken($csrfToken)) {
+    http_response_code(403);
+    echo json_encode(['error' => 'Invalid security token']);
+    exit;
+}
 
 // Get WordPress settings from database
 $wpSettings = [];

@@ -4,6 +4,14 @@
  */
 
 /**
+ * Prevent caching of JSON API responses (especially settings)
+ */
+function setApiNoCacheHeaders() {
+    header('Cache-Control: no-store, no-cache, must-revalidate, private');
+    header('Pragma: no-cache');
+}
+
+/**
  * Escape output for HTML display
  */
 function h($string) {
