@@ -4,6 +4,25 @@
  */
 
 /**
+ * Validate a post-login redirect URL (same-site relative paths only)
+ */
+function getSafeRedirectUrl(?string $url, string $default = '/index.php'): string {
+    if ($url === null || $url === '') {
+        return $default;
+    }
+
+    if ($url[0] !== '/' || (strlen($url) > 1 && $url[1] === '/')) {
+        return $default;
+    }
+
+    if (preg_match('/[\r\n\\\\]/', $url)) {
+        return $default;
+    }
+
+    return $url;
+}
+
+/**
  * Normalize WordPress application password (WP displays with spaces for readability)
  */
 function normalizeWpAppPassword(string $password): string {

@@ -2,9 +2,11 @@
 require_once __DIR__ . '/includes/config.php';
 require_once __DIR__ . '/includes/auth.php';
 
+$redirectTarget = getSafeRedirectUrl($_GET['redirect'] ?? null);
+
 // Redirect if already logged in
 if (isAuthenticated()) {
-    header('Location: /index.php');
+    header('Location: ' . $redirectTarget);
     exit;
 }
 
@@ -12,11 +14,12 @@ $error = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $password = $_POST['password'] ?? '';
+    $redirectTarget = getSafeRedirectUrl($_POST['redirect'] ?? null);
     
     if (empty($password)) {
         $error = 'Password is required';
     } elseif (login($password)) {
-        header('Location: /index.php');
+        header('Location: ' . $redirectTarget);
         exit;
     } else {
         $error = 'Invalid password';
@@ -36,6 +39,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <div class="login-box">
             <h1><?php echo h(SITE_NAME); ?></h1>
             <form method="POST" action="/login.php" id="login-form" autocomplete="on">
+                <?php if ($redirectTarget !== '/index.php'): ?>
+                    <input type="hidden" name="redirect" value="<?php echo h($redirectTarget); ?>">
+                <?php endif; ?>
                 <?php if ($error): ?>
                     <div class="error-message"><?php echo h($error); ?></div>
                 <?php endif; ?>

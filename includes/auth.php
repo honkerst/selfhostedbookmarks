@@ -21,8 +21,9 @@ function requireAuth() {
             echo json_encode(['error' => 'Unauthorized']);
             exit;
         } else {
-            // Web page - redirect to login
-            header('Location: /login.php');
+            // Web page - redirect to login, preserving destination for after login
+            $returnUrl = $_SERVER['REQUEST_URI'] ?? '/';
+            header('Location: /login.php?redirect=' . urlencode($returnUrl));
             exit;
         }
     }
