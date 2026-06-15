@@ -1,6 +1,6 @@
 # Cloudflare Proxy Configuration
 
-This guide explains how to configure Cloudflare proxy (orange cloud) for your del.icio.us Clone installation.
+This guide explains how to configure Cloudflare proxy (orange cloud) for your SelfHostedBookmarks installation.
 
 ## Compatibility
 
