@@ -16,6 +16,14 @@ This guide explains how to configure Cloudflare proxy (orange cloud) for your de
 ### 2. Caching Configuration
 **Important**: Disable caching for authenticated pages and API endpoints.
 
+The application also sends no-cache response headers from the origin on every `/api/*` endpoint (including `/api/settings.php`), as a backup if Cloudflare page rules are misconfigured:
+
+```
+Cache-Control: no-cache, no-store, must-revalidate, private
+Pragma: no-cache
+Expires: 0
+```
+
 #### Page Rules to Create:
 1. **Disable caching for API endpoints**:
    - URL Pattern: `*bookmarks.thoughton.co.uk/api/*`
@@ -67,7 +75,8 @@ Your web server should allow these IPs. If using Apache/Nginx, you may need to c
 - **Requires HTTPS** for clipboard access (Cloudflare provides this)
 
 ### API Endpoints
-- All API endpoints require session authentication
+- Protected endpoints require session authentication; public endpoints (e.g. bookmark listing) do not
+- All `/api/*` responses include `Cache-Control: no-store` headers from the origin — configure Cloudflare to bypass cache for `/api/*` as well
 - Cookies are passed through Cloudflare
 - No CORS issues since bookmarklet uses same origin
 
@@ -80,7 +89,7 @@ After enabling Cloudflare proxy:
 3. ✅ Test bookmarklet - should open popup and save bookmarks
 4. ✅ Test API endpoints - should authenticate correctly
 5. ✅ Verify HTTPS is active (lock icon in browser)
-6. ✅ Check that caching is disabled for `.php` files
+6. ✅ Check that caching is disabled for `.php` files and `/api/*` (verify `Cache-Control: no-store` on API responses in DevTools → Network)
 
 ## Troubleshooting
 

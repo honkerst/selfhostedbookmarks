@@ -26,7 +26,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'shb_base_url' => trim($_POST['shb_base_url'] ?? ''),
                 'wp_base_url' => trim($_POST['wp_base_url'] ?? ''),
                 'wp_user' => trim($_POST['wp_user'] ?? ''),
-                'wp_app_password' => trim($_POST['wp_app_password'] ?? ''),
+                'wp_app_password' => normalizeWpAppPassword(trim($_POST['wp_app_password'] ?? '')),
                 'wp_watch_tag' => trim($_POST['wp_watch_tag'] ?? ''),
                 'wp_post_tags' => trim($_POST['wp_post_tags'] ?? ''),
                 'wp_post_categories' => trim($_POST['wp_post_categories'] ?? '')
@@ -381,6 +381,9 @@ try {
                                     <?php endif; ?>
                                 </span>
                             </div>
+                            <p class="setting-description" style="margin-top: 0.5rem;">
+                                Test Connection uses the URL, username, and password above (Save Settings is not required first). On success, those WordPress credentials are saved automatically.
+                            </p>
                         </div>
 
                         <div class="setting-item">
@@ -548,7 +551,10 @@ WP_BASE_URL="https://thoughton.co.uk" WP_USER="tim" WP_APP_PASSWORD="..." /usr/b
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({
-                        csrf_token: window.CSRF_TOKEN
+                        csrf_token: window.CSRF_TOKEN,
+                        wp_base_url: document.getElementById('wp_base_url')?.value?.trim() || '',
+                        wp_user: document.getElementById('wp_user')?.value?.trim() || '',
+                        wp_app_password: document.getElementById('wp_app_password')?.value || '',
                     })
                 });
 

@@ -4,11 +4,19 @@
  */
 
 /**
- * Prevent caching of JSON API responses (especially settings)
+ * Normalize WordPress application password (WP displays with spaces for readability)
+ */
+function normalizeWpAppPassword(string $password): string {
+    return preg_replace('/\s+/', '', trim($password));
+}
+
+/**
+ * Prevent caching of API and dynamic responses (matches index.php / Cloudflare guidance)
  */
 function setApiNoCacheHeaders() {
-    header('Cache-Control: no-store, no-cache, must-revalidate, private');
+    header('Cache-Control: no-cache, no-store, must-revalidate, private');
     header('Pragma: no-cache');
+    header('Expires: 0');
 }
 
 /**
