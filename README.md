@@ -85,7 +85,7 @@ A simple bookmarking service in memory of del.icio.us, built with vanilla PHP an
 - **Filter by Private**: When logged in, a "Private" tag appears at the top of the sidebar to view only private bookmarks
 - **URL Parameters**: Filter state is reflected in the URL (`?tag=jquery`, `?private=1`, `?search=...`) - shareable and bookmarkable
 - **Pagination**: Navigate through pages of bookmarks (configurable in Settings)
-- **Publish to WordPress**: If WordPress is configured, each bookmark has a 📤 button to manually publish to WordPress
+- **Publish to WordPress**: If WordPress is configured, each bookmark has a publish button to manually publish to WordPress
 
 ### Setup Bookmarklet
 
@@ -261,7 +261,7 @@ SelfHostedBookmarks can automatically post bookmarks to your WordPress site. Thi
 ### Manual Publishing
 
 Once WordPress is configured and tested:
-- Each bookmark on the dashboard will show a 📤 (publish) button
+- Each bookmark on the dashboard will show a publish button
 - Hover over the button to check if the bookmark already exists in WordPress
 - Click to publish the bookmark immediately
 - The button will be greyed out if the bookmark is already published

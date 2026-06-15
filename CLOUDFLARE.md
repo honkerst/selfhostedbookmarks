@@ -2,7 +2,7 @@
 
 This guide explains how to configure Cloudflare proxy (orange cloud) for your del.icio.us Clone installation.
 
-## ✅ Compatibility
+## Compatibility
 
 **Yes, Cloudflare proxy will work!** The application is fully compatible with Cloudflare's proxy service. Here's what you need to know:
 
@@ -76,7 +76,7 @@ Your web server should allow these IPs. If using Apache/Nginx, you may need to c
 
 ### API Endpoints
 - Protected endpoints require session authentication; public endpoints (e.g. bookmark listing) do not
-- All `/api/*` responses include `Cache-Control: no-store` headers from the origin — configure Cloudflare to bypass cache for `/api/*` as well
+- All `/api/*` responses include `Cache-Control: no-store` headers from the origin - configure Cloudflare to bypass cache for `/api/*` as well
 - Cookies are passed through Cloudflare
 - No CORS issues since bookmarklet uses same origin
 
@@ -84,12 +84,12 @@ Your web server should allow these IPs. If using Apache/Nginx, you may need to c
 
 After enabling Cloudflare proxy:
 
-1. ✅ Test login - should work normally
-2. ✅ Test dashboard - should load bookmarks
-3. ✅ Test bookmarklet - should open popup and save bookmarks
-4. ✅ Test API endpoints - should authenticate correctly
-5. ✅ Verify HTTPS is active (lock icon in browser)
-6. ✅ Check that caching is disabled for `.php` files and `/api/*` (verify `Cache-Control: no-store` on API responses in DevTools → Network)
+1. Test login - should work normally
+2. Test dashboard - should load bookmarks
+3. Test bookmarklet - should open popup and save bookmarks
+4. Test API endpoints - should authenticate correctly
+5. Verify HTTPS is active (lock icon in browser)
+6. Check that caching is disabled for `.php` files and `/api/*` (verify `Cache-Control: no-store` on API responses in DevTools → Network)
 
 ## Troubleshooting
 
@@ -111,11 +111,11 @@ After enabling Cloudflare proxy:
 ## Performance Benefits
 
 With Cloudflare proxy enabled, you get:
-- ✅ DDoS protection
-- ✅ Global CDN for faster asset delivery
-- ✅ Free SSL certificate
-- ✅ Bot protection
-- ✅ Analytics and insights
+- DDoS protection
+- Global CDN for faster asset delivery
+- Free SSL certificate
+- Bot protection
+- Analytics and insights
 
 ## Security Considerations
 

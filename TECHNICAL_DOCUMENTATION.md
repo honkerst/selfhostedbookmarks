@@ -507,7 +507,7 @@ $pdo->exec('PRAGMA foreign_keys = ON');  // Enable foreign key constraints
 - Conditional UI based on authentication:
   - Login/Logout button
   - Edit/Delete icons (only when authenticated)
-  - Publish to WordPress button (📤) - only when WordPress is configured and tested
+  - Publish to WordPress button - only when WordPress is configured and tested
   - Bookmarklet sidebar (only when authenticated)
 
 **Key JavaScript File:** `assets/js/dashboard.js`
@@ -906,7 +906,7 @@ $pdo->exec('PRAGMA foreign_keys = ON');  // Enable foreign key constraints
 - **Works on private bookmarks**: Unlike automatic sync, manual publish can publish private bookmarks (uses authenticated API with direct database access)
 
 **User Experience:**
-- Publish button (📤) appears next to Edit/Delete buttons
+- Publish button appears next to Edit/Delete buttons
 - Only visible if WordPress is configured and connection tested
 - Hover to check status (cached for 5 minutes)
 - Click to publish (with confirmation)
